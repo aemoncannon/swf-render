@@ -1,3 +1,7 @@
+*.o
 *.out
 *.png
 *.swf
+tmp
+pkg
+lib

@@ -1,3 +1,5 @@
+#include "flash_rasterizer.h"
+
 #include <math.h>
 #include <stdio.h>
 #include <time.h>
@@ -178,24 +180,24 @@ namespace agg
     class test_styles
     {
     public:
-        test_styles(const rgba8* solid_colors, 
-                    const rgba8* gradient) : 
+        test_styles(const rgba8* solid_colors,
+                    const rgba8* gradient) :
             m_solid_colors(solid_colors),
             m_gradient(gradient)
         {}
 
         // Suppose that style=1 is a gradient
         //---------------------------------------------
-        bool is_solid(unsigned style) const 
-        { 
-            return true;//style != 1; 
+        bool is_solid(unsigned style) const
+        {
+            return true;//style != 1;
         }
 
         // Just returns a color
         //---------------------------------------------
-        const rgba8& color(unsigned style) const 
-        { 
-            return m_solid_colors[0]; 
+        const rgba8& color(unsigned style) const
+        {
+            return m_solid_colors[0];
         }
 
         // Generate span. In our test case only one style (style=1)
@@ -238,14 +240,11 @@ VObject* GetByType(VObject* vobj, const char* tpe) {
   return NULL;
 }
 
-int main(int argc, char* argv[])
-{
-	TinySWFParser parser;
-  if (argc < 2) {
-    fprintf(stderr, "usage: %s file.swf\n", argv[0]);
-    return TRUE;
-  }
-  ParsedSWF* swf = parser.parse(argv[1]);
+
+
+int render(char* input_swf, char* output_png) {
+	  TinySWFParser parser;
+    ParsedSWF* swf = parser.parse(input_swf);
 //  swf->Dump();
 
     int width = 600;
@@ -341,13 +340,18 @@ int main(int argc, char* argv[])
               }
           }
 
-    unsigned error = lodepng_encode32_file("out.png", buf, width, height);
+
+    unsigned error = lodepng_encode32_file(output_png, buf, width, height);
     if(error) printf("error %u: %s\n", error, lodepng_error_text(error)); 
 
     return 1;
 }
 
-
-
-
+int main(int argc, char* argv[]) {
+  if (argc < 2) {
+    fprintf(stderr, "usage: %s file.swf\n", argv[0]);
+    return TRUE;
+  }
+  return render(argv[1], "out.png");
+}
 
