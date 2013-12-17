@@ -6,7 +6,7 @@
 extern "C" VALUE SWFRender = Qnil;
 
 extern "C" void Init_swf_render();
-extern "C" VALUE method_render(VALUE self, VALUE swf_name);
+extern "C" VALUE method_render(VALUE self, VALUE swf_name, VALUE out_name);
 
 // Initial setup function, takes no arguments and returns nothing. Some API
 // notes:
@@ -22,7 +22,7 @@ extern "C" VALUE method_render(VALUE self, VALUE swf_name);
 // 
 void Init_swf_render() {
   SWFRender = rb_define_module("SWFRender");
-  rb_define_singleton_method(SWFRender, "render", (VALUE(*)(...))method_render, 1);
+  rb_define_singleton_method(SWFRender, "render", (VALUE(*)(...))method_render, 2);
 }
 
 // The business logic -- this is the function we're exposing to Ruby. It returns
