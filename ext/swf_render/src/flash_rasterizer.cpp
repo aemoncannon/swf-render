@@ -39,7 +39,7 @@ namespace agg
     class compound_shape
     {
     public:
-        ~compound_shape() 
+        ~compound_shape()
         {}
 
         compound_shape() :
