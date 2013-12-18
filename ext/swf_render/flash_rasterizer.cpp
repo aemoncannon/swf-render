@@ -241,20 +241,17 @@ VObject* GetByType(VObject* vobj, const char* tpe) {
 }
 
 
-int render(char* input_swf, char* output_png) {
+int render_to_buffer(const char* input_swf, unsigned char* buf, int width, int height) {
 	  TinySWFParser parser;
     ParsedSWF* swf = parser.parse(input_swf);
 //  swf->Dump();
 
-    int width = 600;
-    int height = 400;
     agg::compound_shape        m_shape;
 
     m_shape.set_shape(&swf->shapes[0]);
     m_shape.read_next();
     m_shape.scale(width, height);
 
-    unsigned char* buf = new unsigned char[width * height * 4];
     agg::rgba8                 m_colors[100];
     agg::trans_affine          m_scale;
     agg::pod_array<agg::rgba8> m_gradient;
@@ -339,11 +336,37 @@ int render(char* input_swf, char* output_png) {
               }
           }
 
-
-    unsigned error = lodepng_encode32_file(output_png, buf, width, height);
-    if(error) printf("error %u: %s\n", error, lodepng_error_text(error)); 
-
     return 1;
+}
+
+int render_to_png_file(char* input_swf, char* output_png) {
+  int width = 600;
+  int height = 400;
+  unsigned char* buf = new unsigned char[width * height * 4];
+  render_to_buffer(input_swf, buf, width, height);
+  unsigned error = lodepng_encode32_file(output_png, buf, width, height);
+  if(error) {
+    printf("Error %u: %s\n", error, lodepng_error_text(error));
+    return 1;
+  } else {
+    return 0;
+  }
+}
+
+int render_to_png_buffer(char* input_swf,
+                         int width,
+                         int height,
+                         unsigned char** out,
+                         size_t* outsize) {
+  unsigned char* buf = new unsigned char[width * height * 4];
+  render_to_buffer(input_swf, buf, width, height);
+  unsigned error = lodepng_encode32(out, outsize, buf, width, height);
+  if(error) {
+    printf("Error %u: %s\n", error, lodepng_error_text(error));
+    return 1;
+  } else {
+    return 0;
+  }
 }
 
 int main(int argc, char* argv[]) {
@@ -351,6 +374,6 @@ int main(int argc, char* argv[]) {
     fprintf(stderr, "usage: %s file.swf\n", argv[0]);
     return TRUE;
   }
-  return render(argv[1], "out.png");
+  return render_to_png_file(argv[1], "out.png");
 }
 

@@ -1,12 +1,15 @@
 #include <ruby.h>
+#include <stdlib.h>
+
 #include "flash_rasterizer.h"
+
 
 // Allocate two VALUE variables to hold the modules we'll create. Ruby values
 // are all of type VALUE. Qnil is the C representation of Ruby's nil.
 extern "C" VALUE SWFRender = Qnil;
 
 extern "C" void Init_swf_render();
-extern "C" VALUE method_render(VALUE self, VALUE swf_name, VALUE out_name);
+extern "C" VALUE method_render(VALUE self, VALUE swf_name, VALUE width, VALUE height);
 
 // Initial setup function, takes no arguments and returns nothing. Some API
 // notes:
@@ -22,7 +25,7 @@ extern "C" VALUE method_render(VALUE self, VALUE swf_name, VALUE out_name);
 // 
 void Init_swf_render() {
   SWFRender = rb_define_module("SWFRender");
-  rb_define_singleton_method(SWFRender, "render", (VALUE(*)(...))method_render, 2);
+  rb_define_singleton_method(SWFRender, "render", (VALUE(*)(...))method_render, 3);
 
 }
 
@@ -37,7 +40,13 @@ void Init_swf_render() {
 // * INT2NUM converts a C int to a Ruby Fixnum object
 // * rb_ary_store(VALUE, int, VALUE) sets the nth element of a Ruby array
 // 
-VALUE method_render(VALUE self, VALUE swf_name, VALUE out_name) {
-  render(RSTRING_PTR(swf_name), RSTRING_PTR(out_name));
-  return INT2NUM(0);
+VALUE method_render(VALUE self, VALUE swf_name, VALUE width, VALUE height) {
+  unsigned char* result;
+  size_t result_size;
+  render_to_png_buffer(RSTRING_PTR(swf_name),
+                       NUM2INT(width),
+                       NUM2INT(height),
+                       &result,
+                       &result_size);
+  return rb_str_new((char*)result, result_size);
 }
