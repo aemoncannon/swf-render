@@ -23,8 +23,8 @@
 #include "agg_color_gray.h"
 #include "lodepng.h"
 
-#include "common.h"
-#include "TinySWFParser.h"
+#include "tiny_common.h"
+#include "tiny_swfparser.h"
 
 namespace agg
 {
@@ -239,7 +239,6 @@ VObject* GetByType(VObject* vobj, const char* tpe) {
   }
   return NULL;
 }
-
 
 
 int render(char* input_swf, char* output_png) {

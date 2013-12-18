@@ -1,7 +1,7 @@
-#include "common.h"
-#include "tinyswfparser.h"
-#include "TagDefine.h"
-#include "Util.h"
+#include "tiny_common.h"
+#include "tiny_swfparser.h"
+#include "tiny_TagDefine.h"
+#include "tiny_Util.h"
 
 
 namespace {

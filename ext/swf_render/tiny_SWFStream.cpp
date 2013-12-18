@@ -7,10 +7,10 @@
  *
  */
 
-#include "common.h"
+#include "tiny_common.h"
 
-#include "SWFStream.h"
-#include "Util.h"
+#include "tiny_SWFStream.h"
+#include "tiny_Util.h"
 
 
 SWFStream::SWFStream()

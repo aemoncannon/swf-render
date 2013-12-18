@@ -1,0 +1,14 @@
+# To compile and build the local bundle
+rake compile
+
+# To test using the bundle
+irb -Ilib -r swf_render
+
+# To build gem
+rake gem
+
+# To install and test gem
+sudo gem install pkg/foo.gem
+irb
+> require 'swf_render'
+> SWFRender::foo

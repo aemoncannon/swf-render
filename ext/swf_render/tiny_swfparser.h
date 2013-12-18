@@ -1,6 +1,6 @@
-#include "common.h"
-#include "SWFStream.h"
-#include "VObject.h"
+#include "tiny_common.h"
+#include "tiny_SWFStream.h"
+#include "tiny_VObject.h"
 #include <vector>
 
 

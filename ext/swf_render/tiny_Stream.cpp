@@ -7,7 +7,7 @@
  *
  */
 
-#include "Stream.h"
+#include "tiny_Stream.h"
 #include "stdlib.h"
 #include "string.h"
 

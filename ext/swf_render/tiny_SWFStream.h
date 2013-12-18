@@ -7,7 +7,7 @@
  *
  */
 
-#include "common.h"
+#include "tiny_common.h"
 
 #ifndef _SWFSTREAM_H
 #define _SWFSTREAM_H

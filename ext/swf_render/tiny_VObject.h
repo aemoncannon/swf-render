@@ -29,7 +29,7 @@
 #include <vector>
 #include <string>
 
-#include "Stream.h"
+#include "tiny_Stream.h"
 
 #ifndef _VOBJECT_H
 #define _VOBJECT_H

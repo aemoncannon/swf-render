@@ -23,6 +23,7 @@ extern "C" VALUE method_render(VALUE self, VALUE swf_name, VALUE out_name);
 void Init_swf_render() {
   SWFRender = rb_define_module("SWFRender");
   rb_define_singleton_method(SWFRender, "render", (VALUE(*)(...))method_render, 2);
+
 }
 
 // The business logic -- this is the function we're exposing to Ruby. It returns

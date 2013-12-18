@@ -7,9 +7,9 @@
  *
  */
 
-#include "common.h"
-#include "VObject.h"
-#include "debug.h"
+#include "tiny_common.h"
+#include "tiny_VObject.h"
+#include "tiny_debug.h"
 #include <sstream>
 
 

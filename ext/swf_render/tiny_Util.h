@@ -7,7 +7,7 @@
  *
  */
 
-#include "Stream.h"
+#include "tiny_Stream.h"
 
 #ifndef _UTIL_H
 #define _UTIL_H

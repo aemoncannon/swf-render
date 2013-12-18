@@ -7,9 +7,9 @@
  *
  */
 
-#include "Util.h"
+#include "tiny_Util.h"
 #include "zlib.h"
-#include "common.h"
+#include "tiny_common.h"
 
 void debugMsg( const char* fmt, ... )
 {

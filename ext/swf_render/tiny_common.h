@@ -13,8 +13,8 @@
 #include "string.h"
 #include "stdarg.h"
 
-#include "debug.h"
-#include "VObject.h"
+#include "tiny_debug.h"
+#include "tiny_VObject.h"
 
 #ifndef _COMMON_H
 #define _COMMON_H
