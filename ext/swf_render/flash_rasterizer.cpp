@@ -112,7 +112,6 @@ namespace agg
             m_path.remove_all();
             m_styles.remove_all();
             style_library.remove_all();
-
             for (int i = 0; i < m_shape->fill_styles.size(); ++i) {
               const FillStyle& fill = m_shape->fill_styles[i];
               style_library.add_rgba_solid(fill.rgba);
@@ -132,7 +131,6 @@ namespace agg
                     static_cast<const StyleChangeRecord*>(record);
 
                 if (sc->HasNewStyles()) {
-                  style_library.remove_all();
                   for (int i = 0; i < sc->fill_styles.size(); ++i) {
                     const FillStyle& fill = sc->fill_styles[i];
                     style_library.add_rgba_solid(fill.rgba);
