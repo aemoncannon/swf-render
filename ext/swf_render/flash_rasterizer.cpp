@@ -30,66 +30,16 @@ namespace agg
 {
     struct path_style
     {
-        unsigned path_id;
-        int left_fill;
-        int right_fill;
-        int line;
+      unsigned path_id;
+      int left_fill;
+      int right_fill;
+      int line;
+      bool new_styles;
     };
 
     class compound_shape
     {
     public:
-      class styles
-      {
-      public:
-        styles() {
-
-          for(unsigned i = 0; i < 100; i++)
-            {
-              solid_colors.push_back(agg::rgba8(
-                (rand() & 0xFF),
-                (rand() & 0xFF),
-                (rand() & 0xFF),
-                230));
-            }
-        }
-      
-        //---------------------------------------------
-        bool is_solid(unsigned style) const
-        {
-          return true;//style != 1;
-        }
-      
-        // Just returns a color
-        //---------------------------------------------
-        rgba8 color(unsigned style) const
-        {
-          if (style == 0) return rgba8(0, 0, 0, 0);
-          return solid_colors[style-1];
-        }
-
-        void add_rgba_solid(unsigned int v) {
-          printf("0x%x\n", v);
-          solid_colors.push_back(rgba8((v >> 16) & 0xFF, (v >> 8) & 0xFF, v & 0xFF, v >> 24));
-        }
-      
-        // Generate span. In our test case only one style (style=1)
-        // can be a span generator, so that, parameter "style"
-        // isn't used here.
-        //---------------------------------------------
-        void generate_span(rgba8* span, int x, int y, unsigned len, unsigned style)
-        {
-//          printf("genearte span");
-//          memcpy(span, m_gradient + x, sizeof(rgba8) * len);
-        }
-
-        void remove_all()
-        {
-          solid_colors.clear();
-        }
-      
-        std::vector<rgba8> solid_colors;
-      };
 
         ~compound_shape()
         {}
@@ -102,46 +52,101 @@ namespace agg
             m_styles()
         {}
 
+        bool is_solid(unsigned style) const
+        {
+          return true;//style != 1;
+        }
+
+        // Just returns a color
+        //---------------------------------------------
+        rgba8 color(unsigned fill_style_index) const
+        {
+          const FillStyle& fill = m_fill_styles->at(fill_style_index);
+          if (fill.type == FillStyle::kSolid) {
+            const unsigned int v = fill.rgba;
+            return rgba8((v >> 16) & 0xFF, (v >> 8) & 0xFF, v & 0xFF, v >> 24);
+
+          } else if (fill.type == FillStyle::kGradientLinear) {
+            return rgba8(0, 0, 0, 255);
+
+          } else {
+            return rgba8(255, 0, 0, 255);
+          }
+        }
+
+        // Generate span. In our test case only one style (style=1)
+        // can be a span generator, so that, parameter "style"
+        // isn't used here.
+        //---------------------------------------------
+        void generate_span(rgba8* span, int x, int y, unsigned len, unsigned style)
+        {
+//          printf("genearte span");
+//          memcpy(span, m_gradient + x, sizeof(rgba8) * len);
+        }
+
+
         void set_shape(const Shape* shape)
         {
           m_shape = shape;
+          m_fill_styles = &m_shape->fill_styles;
+          m_record_index = 0;
         }
 
+        // Advance to next simple shape (no groups, no overlapping)
         bool read_next()
         {
             m_path.remove_all();
             m_styles.remove_all();
-            style_library.remove_all();
-            for (int i = 0; i < m_shape->fill_styles.size(); ++i) {
-              const FillStyle& fill = m_shape->fill_styles[i];
-              style_library.add_rgba_solid(fill.rgba);
-            }
-
             int last_move_y = 0;
             int last_move_x = 0;
             int last_fill0 = -1;
             int last_fill1 = -1;
             int last_line_style = -1;
+            int fill_style_offset = 0;
             double ax, ay, cx, cy;
-            for (int i = 0; i < m_shape->records.size(); ++i) {
+            for (int i = m_record_index; i < m_shape->records.size(); ++i) {
               const ShapeRecord* record = m_shape->records[i];
               switch (record->RecordType()) {
               case ShapeRecord::kStyleChange: {
                 const StyleChangeRecord* sc =
                     static_cast<const StyleChangeRecord*>(record);
 
-                if (sc->HasNewStyles()) {
-                  for (int i = 0; i < sc->fill_styles.size(); ++i) {
-                    const FillStyle& fill = sc->fill_styles[i];
-                    style_library.add_rgba_solid(fill.rgba);
-                  }
+                // This marks the beginning of a new grouping.
+                if (sc->HasNewStyles() && i != m_record_index) {
+                  m_record_index = i;
+                  return true;
                 }
 
                 path_style style;
                 style.path_id = m_path.start_new_path();
-                style.left_fill = sc->HasFillStyle0() ? sc->fill_style0 : last_fill0;
-                style.right_fill = sc->HasFillStyle1() ? sc->fill_style1 : last_fill1;
-                style.line = sc->HasLineStyle() ? sc->line_style : last_line_style;
+                style.new_styles = sc->HasNewStyles();
+                if (sc->HasNewStyles()) {
+                  m_fill_styles = &sc->fill_styles;
+                }
+
+                if (sc->HasFillStyle0()) {
+                  const int f = sc->fill_style0;
+                  last_fill0 = f;
+                  style.left_fill = f;
+                } else {
+                  style.left_fill = last_fill0;
+                }
+
+                if (sc->HasFillStyle1()) {
+                  const int f = sc->fill_style1;
+                  last_fill1 = f;
+                  style.right_fill = f;
+                } else {
+                  style.right_fill = last_fill1;
+                }
+
+                if (sc->HasLineStyle()) {
+                  last_line_style = sc->line_style;
+                  style.line = sc->line_style;
+                } else {
+                  style.line = last_line_style;
+                }
+
                 if (sc->HasMoveTo()) {
                   last_move_x = sc->move_delta_x;
                   last_move_y = sc->move_delta_y;
@@ -176,11 +181,11 @@ namespace agg
               }
               }
             }
-            return true;
+            return false;
         }
 
 
-        unsigned operator [] (unsigned i) const 
+        unsigned operator [] (unsigned i) const
         {
             return m_styles[i].path_id;
         }
@@ -228,16 +233,17 @@ namespace agg
             m_curve.approximation_scale(m_affine.scale() * s);
         }
 
-        styles style_library;
+        const std::vector<FillStyle>* m_fill_styles;
+        trans_affine                              m_affine;
 
     private:
         path_storage                              m_path;
-        trans_affine                              m_affine;
+
         conv_curve<path_storage>                  m_curve;
         conv_transform<conv_curve<path_storage> > m_trans;
         pod_bvector<path_style>                   m_styles;
         double                                    m_x1, m_y1, m_x2, m_y2;
-
+        int m_record_index;
 
         const Shape* m_shape;
     };
@@ -270,15 +276,13 @@ VObject* GetByType(VObject* vobj, const char* tpe) {
 
 
 int render_to_buffer(const char* input_swf, unsigned char* buf, int width, int height) {
-	  TinySWFParser parser;
-    ParsedSWF* swf = parser.parse(input_swf);
+  TinySWFParser parser;
+  ParsedSWF* swf = parser.parse(input_swf);
   swf->Dump();
 
     agg::compound_shape        m_shape;
 
     m_shape.set_shape(&swf->shapes[0]);
-    m_shape.read_next();
-    m_shape.scale(width, height);
 
     agg::trans_affine          m_scale;
 
@@ -294,56 +298,54 @@ int render_to_buffer(const char* input_swf, unsigned char* buf, int width, int h
 
         pixfmt pixf(rbuf);
         renderer_base ren_base(pixf);
-        ren_base.clear(agg::rgba(1.0, 1.0, 0.95));
+        ren_base.clear(agg::rgba(1.0, 1.0, 1.0));
         renderer_scanline ren(ren_base);
 
         unsigned i;
         unsigned w = unsigned(width);
 
-        agg::rasterizer_scanline_aa<agg::rasterizer_sl_clip_dbl> ras;
-        agg::rasterizer_compound_aa<agg::rasterizer_sl_clip_dbl> rasc;
-        agg::scanline_u8 sl;
-        agg::scanline_bin sl_bin;
-        agg::conv_transform<agg::compound_shape> shape(m_shape, m_scale);
-        agg::conv_stroke<agg::conv_transform<agg::compound_shape> > stroke(shape);
-
-        agg::span_allocator<agg::rgba8> alloc;
-
-        m_shape.approximation_scale(m_scale.scale());
-
-        printf("Filling shapes.\n");
-        // Fill shape
-        //----------------------
-        rasc.clip_box(0, 0, width, height);
-        rasc.reset();
-        //rasc.filling_rule(agg::fill_even_odd);
-        for(i = 0; i < m_shape.paths(); i++)
-        {
-            if(m_shape.style(i).left_fill >= 0 ||
-               m_shape.style(i).right_fill >= 0)
-            {
-                rasc.styles(m_shape.style(i).left_fill,
-                            m_shape.style(i).right_fill);
-                rasc.add_path(shape, m_shape.style(i).path_id);
-            }
-        }
-        agg::render_scanlines_compound(rasc, sl, sl_bin, ren_base, alloc, m_shape.style_library);
-
-        printf("Drawing strokes.\n");
-        ras.clip_box(0, 0, width, height);
-        stroke.width(sqrt(m_scale.scale()));
-        stroke.line_join(agg::round_join);
-        stroke.line_cap(agg::round_cap);
-        for(i = 0; i < m_shape.paths(); i++)
+        m_shape.m_affine.scale(0.1, 0.1);
+        m_shape.m_affine.translate(100, 200);
+        while (m_shape.read_next()) {
+//          m_shape.scale(width, height);
+          agg::rasterizer_scanline_aa<agg::rasterizer_sl_clip_dbl> ras;
+          agg::rasterizer_compound_aa<agg::rasterizer_sl_clip_dbl> rasc;
+          agg::scanline_u8 sl;
+          agg::scanline_bin sl_bin;
+          agg::conv_transform<agg::compound_shape> shape(m_shape, m_scale);
+          agg::conv_stroke<agg::conv_transform<agg::compound_shape> > stroke(shape);
+          agg::span_allocator<agg::rgba8> alloc;
+//          m_shape.approximation_scale(m_scale.scale());
+//          printf("Filling shapes.\n");
+          // Fill shape
+          //----------------------
+          rasc.clip_box(0, 0, width, height);
+          rasc.reset();
+          rasc.layer_order(agg::layer_direct);
+          for(i = 0; i < m_shape.paths(); i++)
           {
-            ras.reset();
-            if(m_shape.style(i).line >= 0)
-              {
-                ras.add_path(stroke, m_shape.style(i).path_id);
-                ren.color(agg::rgba8(0,0,0, 128));
-                agg::render_scanlines(ras, sl, ren);
-              }
+            rasc.styles(m_shape.style(i).left_fill,
+                        m_shape.style(i).right_fill);
+            rasc.add_path(shape, m_shape.style(i).path_id);
           }
+          agg::render_scanlines_compound(rasc, sl, sl_bin, ren_base, alloc, m_shape);
+
+//sh          printf("Drawing strokes.\n");
+          // ras.clip_box(0, 0, width, height);
+          // stroke.width(sqrt(m_scale.scale()));
+          // stroke.line_join(agg::round_join);
+          // stroke.line_cap(agg::round_cap);
+          // for(i = 0; i < m_shape.paths(); i++)
+          //   {
+          //     ras.reset();
+          //     if(m_shape.style(i).line >= 0)
+          //       {
+          //         ras.add_path(stroke, m_shape.style(i).path_id);
+          //         ren.color(agg::rgba8(0,0,0, 128));
+          //         agg::render_scanlines(ras, sl, ren);
+          //       }
+          //   }
+        }
 
     return 1;
 }

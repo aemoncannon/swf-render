@@ -30,7 +30,17 @@ class Matrix {
 
 class FillStyle {
  public:
-  unsigned int type;
+  enum Type {
+    kSolid = 0x00,
+    kGradientLinear = 0x10,
+    kGradientRadial = 0x12,
+    kGradiantFocal = 0x13,
+    kRepeatingBitmap = 0x40,
+    kClippedBitmap = 0x41,
+    kNonSmoothedRepeatingBitmap = 0x42,
+    kNonSmoothedClippedBitmap = 0x43
+  };
+  Type type;
   unsigned int rgba;
   Matrix matrix;
   void Dump() const;
@@ -70,9 +80,9 @@ class StyleChangeRecord : public ShapeRecord {
   unsigned int flags;
   int move_delta_x;
   int move_delta_y;
-  unsigned int fill_style0; // Selectors of FillStyles and LineStyles. Arrays begin at index 1.
-  unsigned int fill_style1;
-  unsigned int line_style;
+  int fill_style0; // Selectors of FillStyles and LineStyles. Arrays begin at index 1. -1 denotes no style.
+  int fill_style1;
+  int line_style;
   bool HasNewStyles() const { return (flags >> 4) & 1; }
   bool HasLineStyle() const { return (flags >> 3) & 1; }
   bool HasFillStyle1() const { return (flags >> 2) & 1; }

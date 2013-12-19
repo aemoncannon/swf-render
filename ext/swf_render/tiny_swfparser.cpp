@@ -402,7 +402,7 @@ int TinySWFParser::getFILLSTYLE(Tag *tag, FillStyle* style)
     // FILLSTYLE
     unsigned int FillStyleType, Color;
     FillStyleType = getUI8();
-    style->type = FillStyleType;
+    style->type = static_cast<FillStyle::Type>(FillStyleType);
     if (FillStyleType == 0x00) { // Solid Color Fill
         if ((tag->TagCode == TAG_DEFINESHAPE) || (tag->TagCode == TAG_DEFINESHAPE2)) {
             style->rgba = getRGB();   // DefineShape/DefineShape2
@@ -443,8 +443,8 @@ int TinySWFParser::getFILLSTYLEARRAY(Tag *tag, std::vector<FillStyle>* styles)
     if (FillStyleCount) {
         for (i = 0; i < FillStyleCount; i++) {
           FillStyle style;
-            getFILLSTYLE(tag, &style);
-            styles->push_back(style);
+          getFILLSTYLE(tag, &style);
+          styles->push_back(style);
         }
     }
 	return TRUE;
@@ -546,13 +546,16 @@ int TinySWFParser::getSHAPE(Tag *tag, Shape* shape)
 					record->move_delta_y = getSBits(MoveBits);
 				}
 				if (StateFillStyle0) {
-					record->fill_style0 = getUBits(NumFillBits);
+          // Note: convert from 1-indexed to 0-indexed
+					record->fill_style0 = getUBits(NumFillBits) - 1;
 				}
 				if (StateFillStyle1) {
-					record->fill_style1 = getUBits(NumFillBits);
+          // Note: convert from 1-indexed to 0-indexed
+					record->fill_style1 = getUBits(NumFillBits) - 1;
 				}
 				if (StateLineStyle) {
-					record->line_style = getUBits(NumLineBits);
+          // Note: convert from 1-indexed to 0-indexed
+					record->line_style = getUBits(NumLineBits) - 1;
 				}
 				if (StateNewStyles) {
          getFILLSTYLEARRAY(tag, &record->fill_styles);
