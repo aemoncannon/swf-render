@@ -3,8 +3,8 @@
 
 #include <stdlib.h>
 
-int render_to_png_file(char* input_swf, char* output_png);
-int render_to_png_buffer(char* input_swf,
+int render_to_png_file(const char* input_swf, const char* output_png);
+int render_to_png_buffer(const char* input_swf,
                          int width,
                          int height,
                          unsigned char** out,

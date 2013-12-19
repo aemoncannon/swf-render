@@ -339,7 +339,7 @@ int render_to_buffer(const char* input_swf, unsigned char* buf, int width, int h
     return 1;
 }
 
-int render_to_png_file(char* input_swf, char* output_png) {
+int render_to_png_file(const char* input_swf, const char* output_png) {
   int width = 600;
   int height = 400;
   unsigned char* buf = new unsigned char[width * height * 4];
@@ -353,7 +353,7 @@ int render_to_png_file(char* input_swf, char* output_png) {
   }
 }
 
-int render_to_png_buffer(char* input_swf,
+int render_to_png_buffer(const char* input_swf,
                          int width,
                          int height,
                          unsigned char** out,
