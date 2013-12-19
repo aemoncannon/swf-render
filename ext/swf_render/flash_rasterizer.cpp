@@ -39,6 +39,58 @@ namespace agg
     class compound_shape
     {
     public:
+      class styles
+      {
+      public:
+        styles() {
+
+          for(unsigned i = 0; i < 100; i++)
+            {
+              solid_colors.push_back(agg::rgba8(
+                (rand() & 0xFF),
+                (rand() & 0xFF),
+                (rand() & 0xFF),
+                230));
+            }
+        }
+      
+        //---------------------------------------------
+        bool is_solid(unsigned style) const
+        {
+          return true;//style != 1;
+        }
+      
+        // Just returns a color
+        //---------------------------------------------
+        rgba8 color(unsigned style) const
+        {
+          if (style == 0) return rgba8(0, 0, 0, 0);
+          return solid_colors[style-1];
+        }
+
+        void add_rgba_solid(unsigned int v) {
+          printf("0x%x\n", v);
+          solid_colors.push_back(rgba8((v >> 16) & 0xFF, (v >> 8) & 0xFF, v & 0xFF, v >> 24));
+        }
+      
+        // Generate span. In our test case only one style (style=1)
+        // can be a span generator, so that, parameter "style"
+        // isn't used here.
+        //---------------------------------------------
+        void generate_span(rgba8* span, int x, int y, unsigned len, unsigned style)
+        {
+//          printf("genearte span");
+//          memcpy(span, m_gradient + x, sizeof(rgba8) * len);
+        }
+
+        void remove_all()
+        {
+          solid_colors.clear();
+        }
+      
+        std::vector<rgba8> solid_colors;
+      };
+
         ~compound_shape()
         {}
 
@@ -59,11 +111,18 @@ namespace agg
         {
             m_path.remove_all();
             m_styles.remove_all();
+            style_library.remove_all();
+
+            for (int i = 0; i < m_shape->fill_styles.size(); ++i) {
+              const FillStyle& fill = m_shape->fill_styles[i];
+              style_library.add_rgba_solid(fill.rgba);
+            }
+
             int last_move_y = 0;
             int last_move_x = 0;
-            int last_fill0 = 0;
-            int last_fill1 = 0;
-            int last_line_style = 0;
+            int last_fill0 = -1;
+            int last_fill1 = -1;
+            int last_line_style = -1;
             double ax, ay, cx, cy;
             for (int i = 0; i < m_shape->records.size(); ++i) {
               const ShapeRecord* record = m_shape->records[i];
@@ -71,6 +130,15 @@ namespace agg
               case ShapeRecord::kStyleChange: {
                 const StyleChangeRecord* sc =
                     static_cast<const StyleChangeRecord*>(record);
+
+                if (sc->HasNewStyles()) {
+                  style_library.remove_all();
+                  for (int i = 0; i < sc->fill_styles.size(); ++i) {
+                    const FillStyle& fill = sc->fill_styles[i];
+                    style_library.add_rgba_solid(fill.rgba);
+                  }
+                }
+
                 path_style style;
                 style.path_id = m_path.start_new_path();
                 style.left_fill = sc->HasFillStyle0() ? sc->fill_style0 : last_fill0;
@@ -162,6 +230,8 @@ namespace agg
             m_curve.approximation_scale(m_affine.scale() * s);
         }
 
+        styles style_library;
+
     private:
         path_storage                              m_path;
         trans_affine                              m_affine;
@@ -170,48 +240,8 @@ namespace agg
         pod_bvector<path_style>                   m_styles;
         double                                    m_x1, m_y1, m_x2, m_y2;
 
+
         const Shape* m_shape;
-    };
-
-
-
-    // Testing class, color provider and span generator
-    //-------------------------------------------------
-    class test_styles
-    {
-    public:
-        test_styles(const rgba8* solid_colors,
-                    const rgba8* gradient) :
-            m_solid_colors(solid_colors),
-            m_gradient(gradient)
-        {}
-
-        // Suppose that style=1 is a gradient
-        //---------------------------------------------
-        bool is_solid(unsigned style) const
-        {
-            return true;//style != 1;
-        }
-
-        // Just returns a color
-        //---------------------------------------------
-        const rgba8& color(unsigned style) const
-        {
-            return m_solid_colors[0];
-        }
-
-        // Generate span. In our test case only one style (style=1)
-        // can be a span generator, so that, parameter "style"
-        // isn't used here.
-        //---------------------------------------------
-        void generate_span(rgba8* span, int x, int y, unsigned len, unsigned style)
-        {
-            memcpy(span, m_gradient + x, sizeof(rgba8) * len);
-        }
-
-    private:
-        const rgba8* m_solid_colors;
-        const rgba8* m_gradient;
     };
 
 
@@ -244,7 +274,7 @@ VObject* GetByType(VObject* vobj, const char* tpe) {
 int render_to_buffer(const char* input_swf, unsigned char* buf, int width, int height) {
 	  TinySWFParser parser;
     ParsedSWF* swf = parser.parse(input_swf);
-//  swf->Dump();
+  swf->Dump();
 
     agg::compound_shape        m_shape;
 
@@ -252,18 +282,8 @@ int render_to_buffer(const char* input_swf, unsigned char* buf, int width, int h
     m_shape.read_next();
     m_shape.scale(width, height);
 
-    agg::rgba8                 m_colors[100];
     agg::trans_affine          m_scale;
-    agg::pod_array<agg::rgba8> m_gradient;
-        for(unsigned i = 0; i < 100; i++)
-        {
-            m_colors[i] = agg::rgba8(
-                (rand() & 0xFF),
-                (rand() & 0xFF),
-                (rand() & 0xFF),
-                230);
-            m_colors[i].premultiply();
-        }
+
 
  typedef agg::pixfmt_bgra32_pre pixfmt;
 
@@ -281,14 +301,6 @@ int render_to_buffer(const char* input_swf, unsigned char* buf, int width, int h
 
         unsigned i;
         unsigned w = unsigned(width);
-        m_gradient.resize(w);
-        agg::rgba8 c1(255, 0, 0, 180);
-        agg::rgba8 c2(0, 0, 255, 180);
-        for(i = 0; i < w; i++)
-        {
-            m_gradient[i] = c1.gradient(c2, i / width);
-            m_gradient[i].premultiply();
-        }
 
         agg::rasterizer_scanline_aa<agg::rasterizer_sl_clip_dbl> ras;
         agg::rasterizer_compound_aa<agg::rasterizer_sl_clip_dbl> rasc;
@@ -297,7 +309,6 @@ int render_to_buffer(const char* input_swf, unsigned char* buf, int width, int h
         agg::conv_transform<agg::compound_shape> shape(m_shape, m_scale);
         agg::conv_stroke<agg::conv_transform<agg::compound_shape> > stroke(shape);
 
-        agg::test_styles style_handler(m_colors, m_gradient.data());
         agg::span_allocator<agg::rgba8> alloc;
 
         m_shape.approximation_scale(m_scale.scale());
@@ -318,7 +329,7 @@ int render_to_buffer(const char* input_swf, unsigned char* buf, int width, int h
                 rasc.add_path(shape, m_shape.style(i).path_id);
             }
         }
-        agg::render_scanlines_compound(rasc, sl, sl_bin, ren_base, alloc, style_handler);
+        agg::render_scanlines_compound(rasc, sl, sl_bin, ren_base, alloc, m_shape.style_library);
 
         printf("Drawing strokes.\n");
         ras.clip_box(0, 0, width, height);

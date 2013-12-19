@@ -257,9 +257,9 @@ namespace agg
 
         //--------------------------------------------------------------------
         rgba8(unsigned r_, unsigned g_, unsigned b_, unsigned a_=base_mask) :
-            r(value_type(r_)), 
-            g(value_type(g_)), 
-            b(value_type(b_)), 
+            r(value_type(r_)),
+            g(value_type(g_)),
+            b(value_type(b_)),
             a(value_type(a_)) {}
 
         //--------------------------------------------------------------------
