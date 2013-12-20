@@ -278,11 +278,13 @@ VObject* GetByType(VObject* vobj, const char* tpe) {
 int render_to_buffer(const char* input_swf, unsigned char* buf, int width, int height) {
   TinySWFParser parser;
   ParsedSWF* swf = parser.parse(input_swf);
-  swf->Dump();
+//  swf->Dump();
 
     agg::compound_shape        m_shape;
 
-    m_shape.set_shape(&swf->shapes[0]);
+    const Shape* shape = &swf->shapes[0];
+
+    m_shape.set_shape(shape);
 
     agg::trans_affine          m_scale;
 
@@ -304,8 +306,19 @@ int render_to_buffer(const char* input_swf, unsigned char* buf, int width, int h
         unsigned i;
         unsigned w = unsigned(width);
 
-        m_shape.m_affine.scale(0.1, 0.1);
-        m_shape.m_affine.translate(100, 200);
+        // m_shape.m_affine.scale(0.1, 0.1);
+        // m_shape.m_affine.translate(100, 200);
+
+        const int x1 = shape->shape_bounds.x_min - 10;
+        const int x2 = shape->shape_bounds.x_max + 10;
+        const int y1 = shape->shape_bounds.y_min - 50;
+        const int y2 = shape->shape_bounds.y_max + 50;
+        agg::trans_viewport vp;
+        vp.preserve_aspect_ratio(0.5, 0.5, agg::aspect_ratio_meet);
+        vp.world_viewport(x1, y1, x2, y2);
+        vp.device_viewport(0, 0, width, height);
+        m_shape.m_affine = vp.to_affine();
+
         while (m_shape.read_next()) {
 //          m_shape.scale(width, height);
           agg::rasterizer_scanline_aa<agg::rasterizer_sl_clip_dbl> ras;
