@@ -80,7 +80,6 @@ namespace agg
         //---------------------------------------------
         void generate_span(rgba8* span, int x, int y, unsigned len, unsigned style)
         {
-//          printf("genearte span");
 //          memcpy(span, m_gradient + x, sizeof(rgba8) * len);
         }
 
@@ -90,6 +89,22 @@ namespace agg
           m_shape = shape;
           m_fill_styles = &m_shape->fill_styles;
           m_record_index = 0;
+        }
+
+        void create_gradients() {
+          for (int i = 0; i < m_fill_styles->size(); i++) {
+            const FillStyle& fill_style = m_fill_styles->at(i);
+            if (fill_style.type == FillStyle::kGradientLinear ||
+                fill_style.type == FillStyle::kGradientRadial) {
+              // The initial gradient square is centered at (0,0),
+              // and extends from (-16384,-16384) to (16384,16384).
+              // Transform that box using the fill's matrix, then
+              // for each point in the transformed (hopefully smaller)
+              // box, lookup the color in the original box. Can we
+              // find an inverse transformation in general?
+              printf("Preparing gradient");
+            }
+          }
         }
 
         // Advance to next simple shape (no groups, no overlapping)
@@ -123,6 +138,7 @@ namespace agg
                 if (sc->HasNewStyles()) {
                   m_fill_styles = &sc->fill_styles;
                 }
+                create_gradients();
 
                 if (sc->HasFillStyle0()) {
                   const int f = sc->fill_style0;
@@ -246,6 +262,8 @@ namespace agg
         int m_record_index;
 
         const Shape* m_shape;
+        // All gradients allocated and cleared for each simple shape.
+        const std::vector<const rgba8*> m_gradients;
     };
 
 

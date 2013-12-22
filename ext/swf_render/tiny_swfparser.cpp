@@ -34,13 +34,13 @@ void Matrix::Dump() const {
 }
 
 void FillStyle::Dump() const {
-  printf("(fill type=%d rgba=%d matrix=", type, rgba);
+  printf("(fill type=%d rgba=%x matrix=", type, rgba);
   matrix.Dump();
   printf(")");
 }
 
 void LineStyle::Dump() const {
-  printf("(linestyle width=%d .... rgba=%d fill=", width, rgba);
+  printf("(linestyle width=%d .... rgba=%x fill=", width, rgba);
   fill.Dump();
   printf(")");
 }
@@ -224,6 +224,7 @@ int TinySWFParser::getGRADIENT(Tag *tag, FillStyle* style)
                 Color = getRGBA(); // for DefineShape3 or later?
                 // gradientRecord["Color"] = Color2String(Color, 1);
             }
+            style->gradient_entries.push_back(std::pair<unsigned, unsigned>(Ratio, Color));
         }
     }
 	return TRUE;

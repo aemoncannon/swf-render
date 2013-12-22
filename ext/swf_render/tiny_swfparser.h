@@ -43,6 +43,8 @@ class FillStyle {
   Type type;
   unsigned int rgba;
   Matrix matrix;
+  // Pairs of ratio (0-255), rgba
+  std::vector<std::pair<unsigned, unsigned> > gradient_entries;
   void Dump() const;
 };
 

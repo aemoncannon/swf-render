@@ -80,7 +80,7 @@ int SWFStream::open(const char *filename)
         fclose(file_stream);
     } else {
         //Util util;
-        unsigned int inflated_stream_size = 0;
+        int inflated_stream_size = 0;
         unsigned char *inflated_stream = 0;
         FileStream theFileStream(file_stream);
         
