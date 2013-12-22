@@ -1,5 +1,6 @@
 #include "flash_rasterizer.h"
 
+#include <assert.h>
 #include <math.h>
 #include <stdio.h>
 #include <time.h>
@@ -102,7 +103,35 @@ namespace agg
               // for each point in the transformed (hopefully smaller)
               // box, lookup the color in the original box. Can we
               // find an inverse transformation in general?
-              printf("Preparing gradient");
+              double x1 = -16384;
+              double y1 = -16384;
+              double x2 = 16384;
+              double y2 = 16384;
+              double x3 = -16384;
+              double y3 = 16384;
+              double x4 = 16384;
+              double y4 = -16384;
+              trans_affine m(m_affine);
+              m.premultiply(fill_style.matrix);
+              // Transform all four corners
+              m.transform(&x1, &y1);
+              m.transform(&x2, &y2);
+              m.transform(&x3, &y3);
+              m.transform(&x4, &y4);
+              // Now find the screen rectangle that completely
+              // contains the rotated rectangle.
+              const int screen_x1 = floor(fmin(x1, fmin(x2, fmin(x3, x4))));
+              const int screen_y1 = floor(fmin(y1, fmin(y2, fmin(y3, y4))));
+              const int screen_x2 = ceil(fmax(x1, fmax(x2, fmax(x3, x4))));
+              const int screen_y2 = ceil(fmax(y1, fmax(y2, fmax(y3, y4))));
+              const int screen_w = screen_x2 - screen_x1;
+              const int screen_h = screen_y2 - screen_y1;
+              assert(screen_w > 0);
+              assert(screen_h > 0);
+              printf("Gradient screen coordinates: %d,%d %d,%d", screen_x1, screen_y1, screen_x2, screen_y2); 
+              rgba8* buf = new rgba8[screen_w * screen_h];
+
+
             }
           }
         }
@@ -266,32 +295,7 @@ namespace agg
         const std::vector<const rgba8*> m_gradients;
     };
 
-
-
-
-}
-
-
-VObject* GetProperty(VObject* vobj, const char* key) {
-  PropertyList *plist = vobj->getPropertyList();
-  for (std::vector<Property>::iterator it = plist->begin(); it != plist->end(); it++) {
-    if (it->name == key) {
-      return it->value;
-    }
-  }
-  return NULL;
-}
-
-VObject* GetByType(VObject* vobj, const char* tpe) {
-  PropertyList *plist = vobj->getPropertyList();
-  for (std::vector<Property>::iterator it = plist->begin(); it != plist->end(); it++) {
-    if (strcmp(it->value->getTypeInfo(), tpe) == 0) {
-      return it->value;
-    }
-  }
-  return NULL;
-}
-
+}  // namespace agg
 
 int render_to_buffer(const char* input_swf, unsigned char* buf, int width, int height) {
   TinySWFParser parser;

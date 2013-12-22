@@ -28,14 +28,10 @@ void Rect::Dump() const {
   printf("(rect xmin=%d xmax=%d ymin=%d ymax=%d)", x_min, x_max, y_min, y_max);
 }
 
-void Matrix::Dump() const {
-  printf("(matrix sx=%f sy=%f r0=%f r1=1%f tx=%d ty=%d)",
-         scale_x, scale_y, rotate_skew0, rotate_skew1, translate_x, translate_y);
-}
-
 void FillStyle::Dump() const {
   printf("(fill type=%d rgba=%x matrix=", type, rgba);
-  matrix.Dump();
+  printf("(matrix sx=%f sy=%f r0=%f r1=1%f tx=%f ty=%f)",
+         matrix.sx, matrix.sy, matrix.shx, matrix.shy, matrix.tx, matrix.ty);
   printf(")");
 }
 
@@ -269,20 +265,28 @@ int TinySWFParser::getMATRIX(Matrix* matrix)
 	signed int TranslateX, TranslateY;
 	setByteAlignment(); // MATRIX Record must be byte aligned.
 	HasScale = getUBits(1);
+  double sx(1.0);
+  double sy(1.0);
+  double shx(0.0);
+  double shy(0.0);
+  double tx(0.0);
+  double ty(0.0);
 	if (HasScale) {
 		NScaleBits = getUBits(5);
-		matrix->scale_x = FIXED2FLOAT(getSBits(NScaleBits));
-		matrix->scale_y = FIXED2FLOAT(getSBits(NScaleBits));
+		sx = FIXED2FLOAT(getSBits(NScaleBits));
+		sy = FIXED2FLOAT(getSBits(NScaleBits));
 	}
 	HasRotate = getUBits(1);
 	if (HasRotate) {
 		NRotateBits = getUBits(5);
-		matrix->rotate_skew0 = FIXED2FLOAT(getSBits(NRotateBits));
-		matrix->rotate_skew1 = FIXED2FLOAT(getSBits(NRotateBits));
+    // TODO(aemon): double check order here
+		shx = FIXED2FLOAT(getSBits(NRotateBits));
+		shy = FIXED2FLOAT(getSBits(NRotateBits));
 	}
 	NTranslateBits = getUBits(5);
-	matrix->translate_x = getSBits(NTranslateBits);
-	matrix->translate_y = getSBits(NTranslateBits);
+	tx = getSBits(NTranslateBits);
+	ty = getSBits(NTranslateBits);
+  *matrix = Matrix(sx, shy, shx, sy, tx, ty);
 	return TRUE;
 }
 

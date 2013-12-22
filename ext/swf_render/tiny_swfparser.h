@@ -1,11 +1,14 @@
 #include "tiny_common.h"
 #include "tiny_SWFStream.h"
 #include "tiny_VObject.h"
+#include "agg_trans_affine.h"
 #include <vector>
 
 
 #ifndef _TINYSWFPARSER_H
 #define _TINYSWFPARSER_H
+
+typedef agg::trans_affine Matrix;
 
 class Rect {
  public:
@@ -13,18 +16,6 @@ class Rect {
   int x_max;
   int y_min;
   int y_max;
-  void Dump() const;
-};
-
-class Matrix {
- public:
-  Matrix() : scale_x(1.0), scale_y(1.0), rotate_skew0(0), rotate_skew1(0), translate_x(0), translate_y(0) {}
-  float scale_x;
-  float scale_y;
-  float rotate_skew0;
-  float rotate_skew1;
-  int translate_x;
-  int translate_y;
   void Dump() const;
 };
 
