@@ -28,6 +28,13 @@ void Rect::Dump() const {
   printf("(rect xmin=%d xmax=%d ymin=%d ymax=%d)", x_min, x_max, y_min, y_max);
 }
 
+agg::rgba8 FillStyle::gradient_color(double ratio) const {
+  agg::rgba8 color;
+  color = c1.gradient(c2, ratio);
+  color.premultiply();
+  return color;
+}
+
 void FillStyle::Dump() const {
   printf("(fill type=%d rgba=%x matrix=", type, rgba);
   printf("(matrix sx=%f sy=%f r0=%f r1=1%f tx=%f ty=%f)",

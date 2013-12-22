@@ -2,6 +2,7 @@
 #include "tiny_SWFStream.h"
 #include "tiny_VObject.h"
 #include "agg_trans_affine.h"
+#include "agg_color_rgba.h"
 #include <vector>
 
 
@@ -34,6 +35,7 @@ class FillStyle {
   Type type;
   unsigned int rgba;
   Matrix matrix;
+  agg::rgba8 gradient_color(double ratio) const;
   // Pairs of ratio (0-255), rgba
   std::vector<std::pair<unsigned, unsigned> > gradient_entries;
   void Dump() const;

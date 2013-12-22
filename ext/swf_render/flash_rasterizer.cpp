@@ -111,6 +111,7 @@ namespace agg
               double y3 = 16384;
               double x4 = 16384;
               double y4 = -16384;
+              const double kGradWidth = x2 - x1;
               trans_affine m(m_affine);
               m.premultiply(fill_style.matrix);
               // Transform all four corners
@@ -128,10 +129,24 @@ namespace agg
               const int screen_h = screen_y2 - screen_y1;
               assert(screen_w > 0);
               assert(screen_h > 0);
-              printf("Gradient screen coordinates: %d,%d %d,%d", screen_x1, screen_y1, screen_x2, screen_y2); 
+              const int dim = screen_w * screen_h;
               rgba8* buf = new rgba8[screen_w * screen_h];
 
-
+              assert(m.is_valid());
+              trans_affine inverse(m);
+              inverse.invert();
+              for (int x = screen_x1; x < (screen_x1 + screen_w); ++x) {
+                for (int y = screen_y1; y < (screen_y1 + screen_h); ++y) {
+                  double grad_x = x;
+                  double grad_y = y;
+                  inverse.transform(&grad_x, &grad_y);
+                  // grad_x, grad_y now identify a point in the original
+                  // gradient rect.
+                  const int color_index = y * screen_w + x;
+                  buf[color_index] =
+                      fill_style.gradient_color(grad_x / kGradWidth);
+                }
+              }
             }
           }
         }
