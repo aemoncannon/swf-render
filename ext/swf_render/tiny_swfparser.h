@@ -26,7 +26,7 @@ class FillStyle {
     kSolid = 0x00,
     kGradientLinear = 0x10,
     kGradientRadial = 0x12,
-    kGradiantFocal = 0x13,
+    kGradientFocal = 0x13,
     kRepeatingBitmap = 0x40,
     kClippedBitmap = 0x41,
     kNonSmoothedRepeatingBitmap = 0x42,

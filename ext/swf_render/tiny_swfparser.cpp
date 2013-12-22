@@ -30,6 +30,8 @@ void Rect::Dump() const {
 
 agg::rgba8 FillStyle::gradient_color(double ratio) const {
   agg::rgba8 color;
+  agg::rgba8 c1(255, 0, 0, 180);
+  agg::rgba8 c2(0, 0, 255, 180);
   color = c1.gradient(c2, ratio);
   color.premultiply();
   return color;

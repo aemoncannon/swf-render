@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <time.h>
 #include <stdlib.h>
+#include <map>
 #include "agg_rendering_buffer.h"
 #include "agg_trans_viewport.h"
 #include "agg_path_storage.h"
@@ -38,6 +39,30 @@ namespace agg
       bool new_styles;
     };
 
+  struct Image {
+    Image() : buf(NULL), screen_x1(0), screen_y1(0), screen_x2(0), screen_y2(0) {}
+    rgba8* buf;
+    int screen_x1;
+    int screen_y1;
+    int screen_x2;
+    int screen_y2;
+    const rgba8* find_color(int x, int y) const {
+      printf("%d, %d\n", x, y);
+      printf("%d, %d, %d, %d\n", screen_x1, screen_y1, screen_x2, screen_y2);
+//      assert(x >= screen_x1);
+//      assert(y >= screen_y1);
+//      assert(x <= screen_x2);
+//      assert(y <= screen_y2);
+      x = std::max(x, screen_x1);
+      x = std::min(x, screen_x2);
+      y = std::max(y, screen_y1);
+      y = std::min(y, screen_y2);
+
+      const int w = screen_x2 - screen_x1;
+      return buf + ((w * y) + (x - screen_x1));
+    }
+  };
+
     class compound_shape
     {
     public:
@@ -53,16 +78,23 @@ namespace agg
             m_styles()
         {}
 
-        bool is_solid(unsigned style) const
+        bool is_solid(unsigned fill_style_index) const
         {
-          return true;//style != 1;
+          const FillStyle& fill = (*m_fill_styles)[fill_style_index];
+          switch (fill.type) {
+          case FillStyle::kGradientLinear:
+          case FillStyle::kGradientRadial:
+          case FillStyle::kGradientFocal:
+            return false;
+          default: return true;
+          }
         }
 
         // Just returns a color
         //---------------------------------------------
         rgba8 color(unsigned fill_style_index) const
         {
-          const FillStyle& fill = m_fill_styles->at(fill_style_index);
+          const FillStyle& fill = (*m_fill_styles)[fill_style_index];
           if (fill.type == FillStyle::kSolid) {
             const unsigned int v = fill.rgba;
             return rgba8((v >> 16) & 0xFF, (v >> 8) & 0xFF, v & 0xFF, v >> 24);
@@ -79,11 +111,10 @@ namespace agg
         // can be a span generator, so that, parameter "style"
         // isn't used here.
         //---------------------------------------------
-        void generate_span(rgba8* span, int x, int y, unsigned len, unsigned style)
-        {
-//          memcpy(span, m_gradient + x, sizeof(rgba8) * len);
+        void generate_span(rgba8* span, int x, int y, unsigned len, unsigned style) {
+          const Image& grad = m_gradients[style];
+          memcpy(span, grad.find_color(x, y), sizeof(rgba8) * len);
         }
-
 
         void set_shape(const Shape* shape)
         {
@@ -94,7 +125,7 @@ namespace agg
 
         void create_gradients() {
           for (int i = 0; i < m_fill_styles->size(); i++) {
-            const FillStyle& fill_style = m_fill_styles->at(i);
+            const FillStyle& fill_style = (*m_fill_styles)[i];
             if (fill_style.type == FillStyle::kGradientLinear ||
                 fill_style.type == FillStyle::kGradientRadial) {
               // The initial gradient square is centered at (0,0),
@@ -121,20 +152,20 @@ namespace agg
               m.transform(&x4, &y4);
               // Now find the screen rectangle that completely
               // contains the rotated rectangle.
-              const int screen_x1 = floor(fmin(x1, fmin(x2, fmin(x3, x4))));
-              const int screen_y1 = floor(fmin(y1, fmin(y2, fmin(y3, y4))));
-              const int screen_x2 = ceil(fmax(x1, fmax(x2, fmax(x3, x4))));
-              const int screen_y2 = ceil(fmax(y1, fmax(y2, fmax(y3, y4))));
+              const int screen_x1 = floor(std::min(x1, std::min(x2, std::min(x3, x4))));
+              const int screen_y1 = floor(std::min(y1, std::min(y2, std::min(y3, y4))));
+              const int screen_x2 = ceil(std::max(x1, std::max(x2, std::max(x3, x4))));
+              const int screen_y2 = ceil(std::max(y1, std::max(y2, std::max(y3, y4))));
               const int screen_w = screen_x2 - screen_x1;
               const int screen_h = screen_y2 - screen_y1;
               assert(screen_w > 0);
               assert(screen_h > 0);
-              const int dim = screen_w * screen_h;
               rgba8* buf = new rgba8[screen_w * screen_h];
 
               assert(m.is_valid());
               trans_affine inverse(m);
               inverse.invert();
+
               for (int x = screen_x1; x < (screen_x1 + screen_w); ++x) {
                 for (int y = screen_y1; y < (screen_y1 + screen_h); ++y) {
                   double grad_x = x;
@@ -147,6 +178,12 @@ namespace agg
                       fill_style.gradient_color(grad_x / kGradWidth);
                 }
               }
+              Image& grad = m_gradients[i];
+              grad.buf = buf;
+              grad.screen_x1 = screen_x1;
+              grad.screen_y1 = screen_y1;
+              grad.screen_x2 = screen_x2;
+              grad.screen_y2 = screen_y2;
             }
           }
         }
@@ -306,8 +343,8 @@ namespace agg
         int m_record_index;
 
         const Shape* m_shape;
-        // All gradients allocated and cleared for each simple shape.
-        const std::vector<const rgba8*> m_gradients;
+        // gradients stored by fill style index.
+        std::map<int, Image> m_gradients;
     };
 
 }  // namespace agg
