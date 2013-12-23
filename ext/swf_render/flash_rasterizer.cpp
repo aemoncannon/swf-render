@@ -55,6 +55,11 @@ namespace agg
             m_styles()
         {}
 
+        const LineStyle& line_style(unsigned line_style_index) const
+        {
+          return (*m_line_styles)[line_style_index];
+        }
+
         bool is_solid(unsigned fill_style_index) const
         {
           const FillStyle& fill = (*m_fill_styles)[fill_style_index];
@@ -108,6 +113,7 @@ namespace agg
         {
           m_shape = shape;
           m_fill_styles = &m_shape->fill_styles;
+          m_line_styles = &m_shape->line_styles;
           m_record_index = 0;
         }
 
@@ -141,6 +147,7 @@ namespace agg
                 style.new_styles = sc->HasNewStyles();
                 if (sc->HasNewStyles()) {
                   m_fill_styles = &sc->fill_styles;
+                  m_line_styles = &sc->line_styles;
                 }
 
                 if (sc->HasFillStyle0()) {
@@ -160,8 +167,9 @@ namespace agg
                 }
 
                 if (sc->HasLineStyle()) {
-                  last_line_style = sc->line_style;
-                  style.line = sc->line_style;
+                  const int f = sc->line_style;
+                  last_line_style = f;
+                  style.line = f;
                 } else {
                   style.line = last_line_style;
                 }
@@ -253,6 +261,7 @@ namespace agg
         }
 
         const std::vector<FillStyle>* m_fill_styles;
+        const std::vector<LineStyle>* m_line_styles;
         trans_affine                              m_affine;
 
     private:
@@ -291,7 +300,7 @@ int render_to_buffer(const char* input_swf, unsigned char* buf, int width, int h
 
   pixfmt pixf(rbuf);
   renderer_base ren_base(pixf);
-  ren_base.clear(agg::rgba(1.0, 1.0, 1.0));
+//  ren_base.clear(agg::rgba(1.0, 1.0, 1.0));
   renderer_scanline ren(ren_base);
 
   unsigned i;
@@ -327,7 +336,7 @@ int render_to_buffer(const char* input_swf, unsigned char* buf, int width, int h
     rasc.clip_box(0, 0, width, height);
     rasc.reset();
     rasc.layer_order(agg::layer_direct);
-    for(i = 0; i < m_shape.paths(); i++)
+    for(int i = 0; i < m_shape.paths(); i++)
     {
       rasc.styles(m_shape.style(i).left_fill,
                   m_shape.style(i).right_fill);
@@ -335,28 +344,48 @@ int render_to_buffer(const char* input_swf, unsigned char* buf, int width, int h
     }
     agg::render_scanlines_compound(rasc, sl, sl_bin, ren_base, alloc, m_shape);
 
-//sh    printf("Drawing strokes.\n");
-    // ras.clip_box(0, 0, width, height);
-    // stroke.width(sqrt(m_scale.scale()));
-    // stroke.line_join(agg::round_join);
-    // stroke.line_cap(agg::round_cap);
-    // for(i = 0; i < m_shape.paths(); i++)
-    //   {
-    //     ras.reset();
-    //     if(m_shape.style(i).line >= 0)
-    //       {
-    //         ras.add_path(stroke, m_shape.style(i).path_id);
-    //         ren.color(agg::rgba8(0,0,0, 128));
-    //         agg::render_scanlines(ras, sl, ren);
-    //       }
-    //   }
+    ras.clip_box(0, 0, width, height);
+    for(int i = 0; i < m_shape.paths(); i++) {
+      ras.reset();
+      if(m_shape.style(i).line >= 0) {
+        const LineStyle& style = m_shape.line_style(m_shape.style(i).line);
+        const float width = (float)style.width * m_shape.m_affine.scale();
+        printf("%f\n", width);
+        stroke.width(width);
+        switch (style.join_style) {
+        case LineStyle::kJoinRound:
+          stroke.line_join(agg::round_join);
+          break;
+        case LineStyle::kJoinBevel:
+          stroke.line_join(agg::bevel_join);
+          break;
+        case LineStyle::kJoinMiter:
+          stroke.line_join(agg::miter_join);
+          break;
+        }
+        switch (style.start_cap_style) {
+        case LineStyle::kCapNone:
+          stroke.line_cap(agg::butt_cap);
+          break;
+        case LineStyle::kCapRound:
+          stroke.line_cap(agg::round_cap);
+          break;
+        case LineStyle::kCapSquare:
+          stroke.line_cap(agg::square_cap);
+          break;
+        }
+        ras.add_path(stroke, m_shape.style(i).path_id);
+        ren.color(make_rgba(style.rgba));
+        agg::render_scanlines(ras, sl, ren);
+      }
+    }
   } while (m_shape.read_next());
   return 1;
 }
 
 int render_to_png_file(const char* input_swf, const char* output_png) {
-  int width = 600;
-  int height = 400;
+  int width = 1200;
+  int height = 800;
   unsigned char* buf = new unsigned char[width * height * 4];
   render_to_buffer(input_swf, buf, width, height);
   unsigned error = lodepng_encode32_file(output_png, buf, width, height);

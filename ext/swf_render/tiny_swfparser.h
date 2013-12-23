@@ -47,15 +47,25 @@ class FillStyle {
 
 class LineStyle {
  public:
+  enum JoinStyle {
+    kJoinRound = 0,
+    kJoinBevel = 1,
+    kJoinMiter = 2
+  };
+  enum CapStyle {
+    kCapRound = 0,
+    kCapNone = 1,
+    kCapSquare = 2
+  };
   unsigned int width;
-  unsigned int start_cap_style;
-  unsigned int join_style;
+  CapStyle start_cap_style;
+  JoinStyle join_style;
   bool has_fill;
   unsigned int no_hscale_flag;
   unsigned int no_vscale_flag;
   unsigned int pixel_hinting_flag;
   unsigned int no_close;
-  unsigned int end_cap_style;
+  CapStyle end_cap_style;
   unsigned int miter_limit_factor;
   unsigned int rgba;
   FillStyle fill;

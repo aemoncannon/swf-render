@@ -512,6 +512,7 @@ namespace agg
             unsigned style;
             bool     solid;
             while((num_styles = ras.sweep_styles()) > 0)
+
             {
                 typename ScanlineAA::const_iterator span_aa;
                 if(num_styles == 1)

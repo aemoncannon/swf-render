@@ -527,15 +527,16 @@ int TinySWFParser::getLINESTYLEARRAY(Tag *tag, std::vector<LineStyle>* styles)
             // LINESTYLE2
             unsigned int Width, StartCapStyle, JoinStyle, HasFillFlag, NoHScaleFlag, NoVScaleFlag, PixelHintingFlag, NoClose, EndCapStyle, MiterLimitFactor, Color;
             style.width           = getUI16();
-            style.start_cap_style   = getUBits(2); // 0 = Round cap, 1 = No cap, 2 = Square cap
-            style.join_style       = getUBits(2); // 0 = Round join, 1 = Bevel join, 2 = Miter join
+
+            style.start_cap_style   = static_cast<LineStyle::CapStyle>(getUBits(2)); // 0 = Round cap, 1 = No cap, 2 = Square cap
+            style.join_style       = static_cast<LineStyle::JoinStyle>(getUBits(2)); // 0 = Round join, 1 = Bevel join, 2 = Miter join
             style.has_fill     = getUBits(1);
             style.no_hscale_flag    = getUBits(1);
             style.no_vscale_flag    = getUBits(1);
             style.pixel_hinting_flag    = getUBits(1);
             getUBits(5); // Reserved must be 0
             style.no_close         = getUBits(1);
-            style.end_cap_style     = getUBits(2);
+            style.end_cap_style     = static_cast<LineStyle::CapStyle>(getUBits(2));
             if (JoinStyle == 2) {
                 style.miter_limit_factor = getUI16();   // Miter limit factor is an 8.8 fixed-point value.
             }
