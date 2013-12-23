@@ -32,7 +32,29 @@ void Rect::Dump() const {
   printf("(rect xmin=%d xmax=%d ymin=%d ymax=%d)", x_min, x_max, y_min, y_max);
 }
 
-agg::rgba8 FillStyle::gradient_color(double ratio) const {
+agg::rgba8 FillStyle::gradient_color(double grad_x, double grad_y) const {
+  static const double x1 = -16384;
+  static const double y1 = -16384;
+  static const double x2 = 16384;
+  static const double y2 = 16384;
+  static const double x3 = -16384;
+  static const double y3 = 16384;
+  static const double x4 = 16384;
+  static const double y4 = -16384;
+  static const double kGradMin = x1;
+  static const double kGradWidth = x2 - x1;
+  static const double kGradRadius = x2;
+  double pos = 0.0;
+  switch (type) {
+  case FillStyle::kGradientLinear:
+    pos = std::max(0.0, std::min(1.0, (grad_x - kGradMin) / kGradWidth));
+    break;
+  case FillStyle::kGradientRadial:
+  case FillStyle::kGradientFocal:
+    pos = std::max(0.0, std::min(1.0, sqrt((grad_x * grad_x) + (grad_y * grad_y)) / kGradRadius));
+    break;
+  default: break;
+  }
   const int len = gradient_entries.size();
   assert(len > 0);
   agg::rgba8 left_color = gradient_entries[0].second;
@@ -40,7 +62,7 @@ agg::rgba8 FillStyle::gradient_color(double ratio) const {
   agg::rgba8 right_color = gradient_entries[len - 1].second;
   double right_pos = 1.0;
   for (int i = 0; i < gradient_entries.size(); i++) {
-    if (ratio < gradient_entries[i].first) {
+    if (pos < gradient_entries[i].first) {
       right_color = gradient_entries[i].second;
       right_pos = gradient_entries[i].first;
       break;
@@ -48,7 +70,7 @@ agg::rgba8 FillStyle::gradient_color(double ratio) const {
     left_color = gradient_entries[i].second;
     left_pos = gradient_entries[i].first;
   }
-  const double r = (ratio - left_pos) / (right_pos - left_pos);
+  const double r = (pos - left_pos) / (right_pos - left_pos);
   agg::rgba8 color = left_color.gradient(right_color, r);
   color.premultiply();
   return color;

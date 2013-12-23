@@ -96,22 +96,11 @@ namespace agg
           Matrix local_to_gradient(m_affine);
           local_to_gradient.premultiply(fill_style.matrix);
           local_to_gradient.invert();
-          const double x1 = -16384;
-          const double y1 = -16384;
-          const double x2 = 16384;
-          const double y2 = 16384;
-          const double x3 = -16384;
-          const double y3 = 16384;
-          const double x4 = 16384;
-          const double y4 = -16384;
-          const double kGradMin = x1;
-          const double kGradWidth = x2 - x1;
           for (int i = 0; i < len; i++) {
             double grad_x = x + i;
             double grad_y = y;
             local_to_gradient.transform(&grad_x, &grad_y);
-            const double r = std::max(0.0, std::min(1.0, (grad_x - kGradMin) / kGradWidth));
-            span[i] = fill_style.gradient_color(r);
+            span[i] = fill_style.gradient_color(grad_x, grad_y);
           }
         }
 

@@ -38,7 +38,8 @@ class FillStyle {
   Type type;
   unsigned int rgba;
   Matrix matrix;
-  agg::rgba8 gradient_color(double ratio) const;
+  // Expects coordinates in the untransformed gradient coordinate space.
+  agg::rgba8 gradient_color(double grad_x, double grad_y) const;
   // Pairs of ratio (0.0-1.0), rgba
   std::vector<std::pair<float, agg::rgba8> > gradient_entries;
   void Dump() const;
