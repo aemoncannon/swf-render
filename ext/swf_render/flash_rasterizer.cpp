@@ -39,40 +39,9 @@ namespace agg
       bool new_styles;
     };
 
-  struct Image {
-    Image() : buf(NULL), screen_x1(0), screen_y1(0), width(0), height(0) {}
-    rgba8* buf;
-    int screen_x1;
-    int screen_y1;
-    int width;
-    int height;
-    void fill_line(rgba8* span, int x, int y, int len) const {
-//      printf("%d, %d\n", x, y);
-//      printf("%d, %d, %d, %d\n", screen_x1, screen_y1, screen_x2, screen_y2);
-//      assert(x >= screen_x1);
-//      assert(y >= screen_y1);
-//      assert(x <= screen_x2);
-//      assert(y <= screen_y2);
-      y = std::max(y, screen_y1);
-      y = std::min(y, screen_y1 + height - 1);
-      int j = y - screen_y1;
-      int i = 0;
-      while (x < screen_x1 && i < len) {
-        span[i] = buf[j * width];
-        ++x;
-        ++i;
-      }
-      const int max = std::max(screen_x1 + width, screen_x1 + len);
-      while (x < max && i < len) {
-        span[i] = buf[(j * width) + i];
-        ++x;
-        ++i;
-      }
-      while (i < len) {
-        span[i] = buf[(j * width) + len - 1];
-        ++i;
-      }
-    }
+  struct GradientInfo {
+    GradientInfo() {}
+    Matrix local_to_gradient;
   };
 
     class compound_shape
@@ -123,7 +92,30 @@ namespace agg
         // isn't used here.
         //---------------------------------------------
         void generate_span(rgba8* span, int x, int y, unsigned len, unsigned style) {
-          m_gradients[style].fill_line(span, x, y, len);
+          const GradientInfo& grad = m_gradients[style];
+          const FillStyle& fill_style = (*m_fill_styles)[style];
+
+          // The initial gradient square is centered at (0,0),
+          // and extends from (-16384,-16384) to (16384,16384).
+          // Transform each point *back* to this box and then
+          // compute the gradient coordinate at that point.
+          const double x1 = -16384;
+          const double y1 = -16384;
+          const double x2 = 16384;
+          const double y2 = 16384;
+          const double x3 = -16384;
+          const double y3 = 16384;
+          const double x4 = 16384;
+          const double y4 = -16384;
+          const double kGradMin = x1;
+          const double kGradWidth = x2 - x1;
+          for (int i = 0; i < len; i++) {
+            double grad_x = x + i;
+            double grad_y = y;
+            grad.local_to_gradient.transform(&grad_x, &grad_y);
+            const double r = std::max(0.0, std::min(1.0, (grad_x - kGradMin) / kGradWidth));
+            span[i] = fill_style.gradient_color(r);
+          }
         }
 
         void set_shape(const Shape* shape)
@@ -138,66 +130,10 @@ namespace agg
             const FillStyle& fill_style = (*m_fill_styles)[i];
             if (fill_style.type == FillStyle::kGradientLinear ||
                 fill_style.type == FillStyle::kGradientRadial) {
-              // The initial gradient square is centered at (0,0),
-              // and extends from (-16384,-16384) to (16384,16384).
-              // Transform that box using the fill's matrix, then
-              // for each point in the transformed (hopefully smaller)
-              // box, lookup the color in the original box. Can we
-              // find an inverse transformation in general?
-              double x1 = -16384;
-              double y1 = -16384;
-              double x2 = 16384;
-              double y2 = 16384;
-              double x3 = -16384;
-              double y3 = 16384;
-              double x4 = 16384;
-              double y4 = -16384;
-              const double kGradMin = x1;
-              const double kGradWidth = x2 - x1;
-              trans_affine m(m_affine);
-              m.premultiply(fill_style.matrix);
-              // Transform all four corners
-              m.transform(&x1, &y1);
-              m.transform(&x2, &y2);
-              m.transform(&x3, &y3);
-              m.transform(&x4, &y4);
-              // Now find the screen rectangle that completely
-              // contains the rotated rectangle.
-              const int screen_x1 = floor(std::min(x1, std::min(x2, std::min(x3, x4))));
-              const int screen_y1 = floor(std::min(y1, std::min(y2, std::min(y3, y4))));
-              const int screen_x2 = ceil(std::max(x1, std::max(x2, std::max(x3, x4))));
-              const int screen_y2 = ceil(std::max(y1, std::max(y2, std::max(y3, y4))));
-              const int screen_w = screen_x2 - screen_x1;
-              const int screen_h = screen_y2 - screen_y1;
-              assert(screen_w > 0);
-              assert(screen_h > 0);
-              const int kBufLen = screen_w * screen_h;
-              rgba8* buf = new rgba8[kBufLen];
-
-              assert(m.is_valid());
-              trans_affine inverse(m);
-              inverse.invert();
-
-              for (int x = 0; x < screen_w; ++x) {
-                for (int y = 0; y < screen_h; ++y) {
-                  double grad_x = x + screen_x1;
-                  double grad_y = y + screen_y1;
-                  inverse.transform(&grad_x, &grad_y);
-                  // grad_x, grad_y now identify a point in the original
-                  // gradient rect.
-                  const int color_index = y * screen_w + x;
-                  assert(color_index >= 0);
-                  assert(color_index < kBufLen);
-                  const double pos = std::max(0.0, std::min(1.0, (grad_x - kGradMin) / kGradWidth));
-                  buf[color_index] = fill_style.gradient_color(pos);
-                }
-              }
-              Image& grad = m_gradients[i];
-              grad.buf = buf;
-              grad.screen_x1 = screen_x1;
-              grad.screen_y1 = screen_y1;
-              grad.width = screen_w;
-              grad.height = screen_h;
+              GradientInfo& grad = m_gradients[i];
+              grad.local_to_gradient = m_affine;
+              grad.local_to_gradient.premultiply(fill_style.matrix);
+              grad.local_to_gradient.invert();
             }
           }
         }
@@ -358,7 +294,7 @@ namespace agg
 
         const Shape* m_shape;
         // gradients stored by fill style index.
-        std::map<int, Image> m_gradients;
+        std::map<int, GradientInfo> m_gradients;
     };
 
 }  // namespace agg
