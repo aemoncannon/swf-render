@@ -4,12 +4,15 @@
 #include "agg_trans_affine.h"
 #include "agg_color_rgba.h"
 #include <vector>
+#include <assert.h>
 
 
 #ifndef _TINYSWFPARSER_H
 #define _TINYSWFPARSER_H
 
 typedef agg::trans_affine Matrix;
+
+agg::rgba8 make_rgba(unsigned v);
 
 class Rect {
  public:
@@ -36,8 +39,8 @@ class FillStyle {
   unsigned int rgba;
   Matrix matrix;
   agg::rgba8 gradient_color(double ratio) const;
-  // Pairs of ratio (0-255), rgba
-  std::vector<std::pair<unsigned, unsigned> > gradient_entries;
+  // Pairs of ratio (0.0-1.0), rgba
+  std::vector<std::pair<float, agg::rgba8> > gradient_entries;
   void Dump() const;
 };
 

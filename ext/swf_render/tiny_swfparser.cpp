@@ -24,15 +24,32 @@ void HandleDefineShape4(Tag* tag, TinySWFParser* parser, ParsedSWF* swf) {
 
 }  // namespace
 
+agg::rgba8 make_rgba(unsigned v) {
+  return agg::rgba8((v >> 16) & 0xFF, (v >> 8) & 0xFF, v & 0xFF, v >> 24);
+}
+
 void Rect::Dump() const {
   printf("(rect xmin=%d xmax=%d ymin=%d ymax=%d)", x_min, x_max, y_min, y_max);
 }
 
 agg::rgba8 FillStyle::gradient_color(double ratio) const {
-  agg::rgba8 color;
-  agg::rgba8 c1(255, 0, 0, 180);
-  agg::rgba8 c2(0, 0, 255, 180);
-  color = c1.gradient(c2, ratio);
+  const int len = gradient_entries.size();
+  assert(len > 0);
+  agg::rgba8 left_color = gradient_entries[0].second;
+  double left_pos = 0.0;
+  agg::rgba8 right_color = gradient_entries[len - 1].second;
+  double right_pos = 1.0;
+  for (int i = 0; i < gradient_entries.size(); i++) {
+    if (ratio < gradient_entries[i].first) {
+      right_color = gradient_entries[i].second;
+      right_pos = gradient_entries[i].first;
+      break;
+    }
+    left_color = gradient_entries[i].second;
+    left_pos = gradient_entries[i].first;
+  }
+  const double r = (ratio - left_pos) / (right_pos - left_pos);
+  agg::rgba8 color = left_color.gradient(right_color, r);
   color.premultiply();
   return color;
 }
@@ -229,7 +246,10 @@ int TinySWFParser::getGRADIENT(Tag *tag, FillStyle* style)
                 Color = getRGBA(); // for DefineShape3 or later?
                 // gradientRecord["Color"] = Color2String(Color, 1);
             }
-            style->gradient_entries.push_back(std::pair<unsigned, unsigned>(Ratio, Color));
+            const float r = (float)Ratio / 255.0;
+            printf("r = %f\n", r);
+            style->gradient_entries.push_back(
+                std::pair<float, agg::rgba8>(r, make_rgba(Color)));
         }
     }
 	return TRUE;
@@ -289,8 +309,8 @@ int TinySWFParser::getMATRIX(Matrix* matrix)
 	if (HasRotate) {
 		NRotateBits = getUBits(5);
     // TODO(aemon): double check order here
-		shx = FIXED2FLOAT(getSBits(NRotateBits));
 		shy = FIXED2FLOAT(getSBits(NRotateBits));
+		shx = FIXED2FLOAT(getSBits(NRotateBits));
 	}
 	NTranslateBits = getUBits(5);
 	tx = getSBits(NTranslateBits);

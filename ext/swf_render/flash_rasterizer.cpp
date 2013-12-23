@@ -40,26 +40,38 @@ namespace agg
     };
 
   struct Image {
-    Image() : buf(NULL), screen_x1(0), screen_y1(0), screen_x2(0), screen_y2(0) {}
+    Image() : buf(NULL), screen_x1(0), screen_y1(0), width(0), height(0) {}
     rgba8* buf;
     int screen_x1;
     int screen_y1;
-    int screen_x2;
-    int screen_y2;
-    const rgba8* find_color(int x, int y) const {
-      printf("%d, %d\n", x, y);
-      printf("%d, %d, %d, %d\n", screen_x1, screen_y1, screen_x2, screen_y2);
+    int width;
+    int height;
+    void fill_line(rgba8* span, int x, int y, int len) const {
+//      printf("%d, %d\n", x, y);
+//      printf("%d, %d, %d, %d\n", screen_x1, screen_y1, screen_x2, screen_y2);
 //      assert(x >= screen_x1);
 //      assert(y >= screen_y1);
 //      assert(x <= screen_x2);
 //      assert(y <= screen_y2);
-      x = std::max(x, screen_x1);
-      x = std::min(x, screen_x2);
       y = std::max(y, screen_y1);
-      y = std::min(y, screen_y2);
-
-      const int w = screen_x2 - screen_x1;
-      return buf + ((w * y) + (x - screen_x1));
+      y = std::min(y, screen_y1 + height - 1);
+      int j = y - screen_y1;
+      int i = 0;
+      while (x < screen_x1 && i < len) {
+        span[i] = buf[j * width];
+        ++x;
+        ++i;
+      }
+      const int max = std::max(screen_x1 + width, screen_x1 + len);
+      while (x < max && i < len) {
+        span[i] = buf[(j * width) + i];
+        ++x;
+        ++i;
+      }
+      while (i < len) {
+        span[i] = buf[(j * width) + len - 1];
+        ++i;
+      }
     }
   };
 
@@ -96,8 +108,7 @@ namespace agg
         {
           const FillStyle& fill = (*m_fill_styles)[fill_style_index];
           if (fill.type == FillStyle::kSolid) {
-            const unsigned int v = fill.rgba;
-            return rgba8((v >> 16) & 0xFF, (v >> 8) & 0xFF, v & 0xFF, v >> 24);
+            return make_rgba(fill.rgba);
 
           } else if (fill.type == FillStyle::kGradientLinear) {
             return rgba8(0, 0, 0, 255);
@@ -112,8 +123,7 @@ namespace agg
         // isn't used here.
         //---------------------------------------------
         void generate_span(rgba8* span, int x, int y, unsigned len, unsigned style) {
-          const Image& grad = m_gradients[style];
-          memcpy(span, grad.find_color(x, y), sizeof(rgba8) * len);
+          m_gradients[style].fill_line(span, x, y, len);
         }
 
         void set_shape(const Shape* shape)
@@ -142,6 +152,7 @@ namespace agg
               double y3 = 16384;
               double x4 = 16384;
               double y4 = -16384;
+              const double kGradMin = x1;
               const double kGradWidth = x2 - x1;
               trans_affine m(m_affine);
               m.premultiply(fill_style.matrix);
@@ -160,30 +171,33 @@ namespace agg
               const int screen_h = screen_y2 - screen_y1;
               assert(screen_w > 0);
               assert(screen_h > 0);
-              rgba8* buf = new rgba8[screen_w * screen_h];
+              const int kBufLen = screen_w * screen_h;
+              rgba8* buf = new rgba8[kBufLen];
 
               assert(m.is_valid());
               trans_affine inverse(m);
               inverse.invert();
 
-              for (int x = screen_x1; x < (screen_x1 + screen_w); ++x) {
-                for (int y = screen_y1; y < (screen_y1 + screen_h); ++y) {
-                  double grad_x = x;
-                  double grad_y = y;
+              for (int x = 0; x < screen_w; ++x) {
+                for (int y = 0; y < screen_h; ++y) {
+                  double grad_x = x + screen_x1;
+                  double grad_y = y + screen_y1;
                   inverse.transform(&grad_x, &grad_y);
                   // grad_x, grad_y now identify a point in the original
                   // gradient rect.
                   const int color_index = y * screen_w + x;
-                  buf[color_index] =
-                      fill_style.gradient_color(grad_x / kGradWidth);
+                  assert(color_index >= 0);
+                  assert(color_index < kBufLen);
+                  const double pos = std::max(0.0, std::min(1.0, (grad_x - kGradMin) / kGradWidth));
+                  buf[color_index] = fill_style.gradient_color(pos);
                 }
               }
               Image& grad = m_gradients[i];
               grad.buf = buf;
               grad.screen_x1 = screen_x1;
               grad.screen_y1 = screen_y1;
-              grad.screen_x2 = screen_x2;
-              grad.screen_y2 = screen_y2;
+              grad.width = screen_w;
+              grad.height = screen_h;
             }
           }
         }
@@ -352,89 +366,86 @@ namespace agg
 int render_to_buffer(const char* input_swf, unsigned char* buf, int width, int height) {
   TinySWFParser parser;
   ParsedSWF* swf = parser.parse(input_swf);
-//  swf->Dump();
+  swf->Dump();
 
-    agg::compound_shape        m_shape;
+  agg::compound_shape        m_shape;
+  const Shape* shape = &swf->shapes[0];
+  m_shape.set_shape(shape);
 
-    const Shape* shape = &swf->shapes[0];
+  agg::trans_affine          m_scale;
 
-    m_shape.set_shape(shape);
+  typedef agg::pixfmt_bgra32_pre pixfmt;
 
-    agg::trans_affine          m_scale;
+  agg::rendering_buffer rbuf;
+  rbuf.attach(buf, width, height, width * 4);
 
+  typedef agg::renderer_base<pixfmt> renderer_base;
+  typedef agg::renderer_scanline_aa_solid<renderer_base> renderer_scanline;
+  typedef agg::scanline_u8 scanline;
 
- typedef agg::pixfmt_bgra32_pre pixfmt;
+  pixfmt pixf(rbuf);
+  renderer_base ren_base(pixf);
+  ren_base.clear(agg::rgba(1.0, 1.0, 1.0));
+  renderer_scanline ren(ren_base);
 
-        agg::rendering_buffer rbuf;
-        rbuf.attach(buf, width, height, width * 4);
+  unsigned i;
+  unsigned w = unsigned(width);
 
-        typedef agg::renderer_base<pixfmt> renderer_base;
-        typedef agg::renderer_scanline_aa_solid<renderer_base> renderer_scanline;
-        typedef agg::scanline_u8 scanline;
+  // m_shape.m_affine.scale(0.1, 0.1);
+  // m_shape.m_affine.translate(100, 200);
 
-        pixfmt pixf(rbuf);
-        renderer_base ren_base(pixf);
-        ren_base.clear(agg::rgba(1.0, 1.0, 1.0));
-        renderer_scanline ren(ren_base);
+  const int x1 = shape->shape_bounds.x_min - 10;
+  const int x2 = shape->shape_bounds.x_max + 10;
+  const int y1 = shape->shape_bounds.y_min - 50;
+  const int y2 = shape->shape_bounds.y_max + 50;
+  agg::trans_viewport vp;
+  vp.preserve_aspect_ratio(0.5, 0.5, agg::aspect_ratio_meet);
+  vp.world_viewport(x1, y1, x2, y2);
+  vp.device_viewport(0, 0, width, height);
+  m_shape.m_affine = vp.to_affine();
 
-        unsigned i;
-        unsigned w = unsigned(width);
+  m_shape.read_next();
+  do {
+//    m_shape.scale(width, height);
+    agg::rasterizer_scanline_aa<agg::rasterizer_sl_clip_dbl> ras;
+    agg::rasterizer_compound_aa<agg::rasterizer_sl_clip_dbl> rasc;
+    agg::scanline_u8 sl;
+    agg::scanline_bin sl_bin;
+    agg::conv_transform<agg::compound_shape> shape(m_shape, m_scale);
+    agg::conv_stroke<agg::conv_transform<agg::compound_shape> > stroke(shape);
+    agg::span_allocator<agg::rgba8> alloc;
+//    m_shape.approximation_scale(m_scale.scale());
+//    printf("Filling shapes.\n");
+    // Fill shape
+    //----------------------
+    rasc.clip_box(0, 0, width, height);
+    rasc.reset();
+    rasc.layer_order(agg::layer_direct);
+    for(i = 0; i < m_shape.paths(); i++)
+    {
+      rasc.styles(m_shape.style(i).left_fill,
+                  m_shape.style(i).right_fill);
+      rasc.add_path(shape, m_shape.style(i).path_id);
+    }
+    agg::render_scanlines_compound(rasc, sl, sl_bin, ren_base, alloc, m_shape);
 
-        // m_shape.m_affine.scale(0.1, 0.1);
-        // m_shape.m_affine.translate(100, 200);
-
-        const int x1 = shape->shape_bounds.x_min - 10;
-        const int x2 = shape->shape_bounds.x_max + 10;
-        const int y1 = shape->shape_bounds.y_min - 50;
-        const int y2 = shape->shape_bounds.y_max + 50;
-        agg::trans_viewport vp;
-        vp.preserve_aspect_ratio(0.5, 0.5, agg::aspect_ratio_meet);
-        vp.world_viewport(x1, y1, x2, y2);
-        vp.device_viewport(0, 0, width, height);
-        m_shape.m_affine = vp.to_affine();
-
-        while (m_shape.read_next()) {
-//          m_shape.scale(width, height);
-          agg::rasterizer_scanline_aa<agg::rasterizer_sl_clip_dbl> ras;
-          agg::rasterizer_compound_aa<agg::rasterizer_sl_clip_dbl> rasc;
-          agg::scanline_u8 sl;
-          agg::scanline_bin sl_bin;
-          agg::conv_transform<agg::compound_shape> shape(m_shape, m_scale);
-          agg::conv_stroke<agg::conv_transform<agg::compound_shape> > stroke(shape);
-          agg::span_allocator<agg::rgba8> alloc;
-//          m_shape.approximation_scale(m_scale.scale());
-//          printf("Filling shapes.\n");
-          // Fill shape
-          //----------------------
-          rasc.clip_box(0, 0, width, height);
-          rasc.reset();
-          rasc.layer_order(agg::layer_direct);
-          for(i = 0; i < m_shape.paths(); i++)
-          {
-            rasc.styles(m_shape.style(i).left_fill,
-                        m_shape.style(i).right_fill);
-            rasc.add_path(shape, m_shape.style(i).path_id);
-          }
-          agg::render_scanlines_compound(rasc, sl, sl_bin, ren_base, alloc, m_shape);
-
-//sh          printf("Drawing strokes.\n");
-          // ras.clip_box(0, 0, width, height);
-          // stroke.width(sqrt(m_scale.scale()));
-          // stroke.line_join(agg::round_join);
-          // stroke.line_cap(agg::round_cap);
-          // for(i = 0; i < m_shape.paths(); i++)
-          //   {
-          //     ras.reset();
-          //     if(m_shape.style(i).line >= 0)
-          //       {
-          //         ras.add_path(stroke, m_shape.style(i).path_id);
-          //         ren.color(agg::rgba8(0,0,0, 128));
-          //         agg::render_scanlines(ras, sl, ren);
-          //       }
-          //   }
-        }
-
-    return 1;
+//sh    printf("Drawing strokes.\n");
+    // ras.clip_box(0, 0, width, height);
+    // stroke.width(sqrt(m_scale.scale()));
+    // stroke.line_join(agg::round_join);
+    // stroke.line_cap(agg::round_cap);
+    // for(i = 0; i < m_shape.paths(); i++)
+    //   {
+    //     ras.reset();
+    //     if(m_shape.style(i).line >= 0)
+    //       {
+    //         ras.add_path(stroke, m_shape.style(i).path_id);
+    //         ren.color(agg::rgba8(0,0,0, 128));
+    //         agg::render_scanlines(ras, sl, ren);
+    //       }
+    //   }
+  } while (m_shape.read_next());
+  return 1;
 }
 
 int render_to_png_file(const char* input_swf, const char* output_png) {
