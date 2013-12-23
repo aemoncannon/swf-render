@@ -39,10 +39,6 @@ namespace agg
       bool new_styles;
     };
 
-  struct GradientInfo {
-    GradientInfo() {}
-    Matrix local_to_gradient;
-  };
 
     class compound_shape
     {
@@ -92,13 +88,14 @@ namespace agg
         // isn't used here.
         //---------------------------------------------
         void generate_span(rgba8* span, int x, int y, unsigned len, unsigned style) {
-          const GradientInfo& grad = m_gradients[style];
           const FillStyle& fill_style = (*m_fill_styles)[style];
-
           // The initial gradient square is centered at (0,0),
           // and extends from (-16384,-16384) to (16384,16384).
           // Transform each point *back* to this box and then
           // compute the gradient coordinate at that point.
+          Matrix local_to_gradient(m_affine);
+          local_to_gradient.premultiply(fill_style.matrix);
+          local_to_gradient.invert();
           const double x1 = -16384;
           const double y1 = -16384;
           const double x2 = 16384;
@@ -112,7 +109,7 @@ namespace agg
           for (int i = 0; i < len; i++) {
             double grad_x = x + i;
             double grad_y = y;
-            grad.local_to_gradient.transform(&grad_x, &grad_y);
+            local_to_gradient.transform(&grad_x, &grad_y);
             const double r = std::max(0.0, std::min(1.0, (grad_x - kGradMin) / kGradWidth));
             span[i] = fill_style.gradient_color(r);
           }
@@ -123,19 +120,6 @@ namespace agg
           m_shape = shape;
           m_fill_styles = &m_shape->fill_styles;
           m_record_index = 0;
-        }
-
-        void create_gradients() {
-          for (int i = 0; i < m_fill_styles->size(); i++) {
-            const FillStyle& fill_style = (*m_fill_styles)[i];
-            if (fill_style.type == FillStyle::kGradientLinear ||
-                fill_style.type == FillStyle::kGradientRadial) {
-              GradientInfo& grad = m_gradients[i];
-              grad.local_to_gradient = m_affine;
-              grad.local_to_gradient.premultiply(fill_style.matrix);
-              grad.local_to_gradient.invert();
-            }
-          }
         }
 
         // Advance to next simple shape (no groups, no overlapping)
@@ -169,7 +153,6 @@ namespace agg
                 if (sc->HasNewStyles()) {
                   m_fill_styles = &sc->fill_styles;
                 }
-                create_gradients();
 
                 if (sc->HasFillStyle0()) {
                   const int f = sc->fill_style0;
@@ -293,8 +276,6 @@ namespace agg
         int m_record_index;
 
         const Shape* m_shape;
-        // gradients stored by fill style index.
-        std::map<int, GradientInfo> m_gradients;
     };
 
 }  // namespace agg
