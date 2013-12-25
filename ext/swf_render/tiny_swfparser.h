@@ -135,12 +135,20 @@ class Shape {
   void Dump() const;
 };
 
+class Sprite {
+ public:
+  unsigned int character_id;
+  unsigned int frame_count;
+  void Dump() const {}
+};
+
 class ParsedSWF {
  public:
   Rect frame_size;
   float frame_rate;
   unsigned int frame_count;
   std::vector<Shape> shapes;
+  std::vector<Sprite> sprites;
   void Dump() const;
 };
 
@@ -155,6 +163,10 @@ public:
     //// User Operation
     ParsedSWF* parse(const char *filename);
     ParsedSWF* parseWithCallback(const char *filename, ProgressUpdateFunctionPtr progressUpdate);
+
+    int HandleDefineSprite(Tag *tag, ParsedSWF* swf);
+    void HandleDefineShape4(Tag* tag, ParsedSWF* swf);
+    void HandlePlaceObject23(Tag* tag, Sprite* sprite);
     
 	//// Color Operations
 	unsigned int	getRGB();

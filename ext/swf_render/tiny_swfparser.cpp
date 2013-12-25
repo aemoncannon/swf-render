@@ -3,27 +3,6 @@
 #include "tiny_TagDefine.h"
 #include "tiny_Util.h"
 
-
-namespace {
-
-void HandleDefineShape4(Tag* tag, TinySWFParser* parser, ParsedSWF* swf) {
-  Shape shape;
-	shape.shape_id = parser->getUI16();
-	parser->getRECT(&shape.shape_bounds); // ShapeBounds
-  if (tag->TagCode == TAG_DEFINESHAPE4) { // DefineShape4 only
-    parser->getRECT(&shape.edge_bounds); // ShapeBounds
-    parser->getUBits(5); // Reserved. Must be 0
-    int UsesFillWindingRule, UsesNonScalingStrokes, UsesScalingStrokes;
-    shape.uses_fill_winding_rule = parser->getUBits(1);
-    shape.uses_non_scaling_strokes = parser->getUBits(1);
-    shape.uses_scaling_strokes = parser->getUBits(1);
-  }
-	parser->getSHAPEWITHSTYLE(tag, &shape);
-  swf->shapes.push_back(shape);
-}
-
-}  // namespace
-
 agg::rgba8 make_rgba(unsigned v) {
   return agg::rgba8((v >> 16) & 0xFF, (v >> 8) & 0xFF, v & 0xFF, v >> 24);
 }
@@ -198,33 +177,149 @@ ParsedSWF* TinySWFParser::parseWithCallback(const char *filename, ProgressUpdate
     unsigned int TagCode = 0, TagLength = 0;
     unsigned int tagNo = 0;
 
-    DEBUGMSG(",\nTags : [\n");
     do {
         Tag tag;
         getTagCodeAndLength(&tag);
         TagCode		= tag.TagCode;
         TagLength	= tag.TagLength;
-        if (progressUpdate) {
-            if (!progressUpdate((tag.TagBodyOffset * 100) / FileLength)) {
-                // the caller want to stop the parsing.
-                break;
-            }
-        }
         switch (TagCode) {
         case TAG_DEFINESHAPE4: {
-          HandleDefineShape4(&tag, this, swf);
+          HandleDefineShape4(&tag, swf);
+          break;
+        }
+        case TAG_DEFINESPRITE: {
+          HandleDefineSprite(&tag, swf);
           break;
         }
         default: seek(tag.NextTagPos);
         }
         tagNo++;
     } while ( TagCode != 0x0); /* Parse untile END Tag(0x0) */
-    DEBUGMSG("]\n}\n"); // End of SWFStream
-	if (getStreamPos() != getFileLength()) {
-		DEBUGMSG("Fatal Error, not complete parsing, pos = %d, file length = %d\n", getStreamPos(), getFileLength());
+    if (getStreamPos() != getFileLength()) {
+      DEBUGMSG("Fatal Error, not complete parsing, pos = %d, file length = %d\n", getStreamPos(), getFileLength());
         return NULL;
     }
     return swf;
+}
+
+
+int TinySWFParser::HandleDefineSprite(Tag *tag, ParsedSWF* swf) // 39 = 0x27 (SWF3)
+{
+  Sprite sprite;
+  sprite.character_id = getUI16();
+  sprite.frame_count = getUI16();
+  unsigned int TagCode = 0, TagLength = 0, tagNo = 0;
+  do {
+    Tag tag2;
+    getTagCodeAndLength(&tag2);
+    TagCode = tag2.TagCode;
+    TagLength = tag2.TagLength;
+    switch (TagCode) {
+    case TAG_PLACEOBJECT: {
+      assert(false);
+      break;
+    }
+    case TAG_PLACEOBJECT2:
+    case TAG_PLACEOBJECT3: {
+      HandlePlaceObject23(tag, &sprite);
+      break;
+    }
+    default: seek(tag2.NextTagPos);
+    }
+    tagNo++;
+  } while (TagCode != 0x0);
+  swf->sprites.push_back(sprite);
+  return TRUE;
+}
+
+
+void TinySWFParser::HandleDefineShape4(Tag* tag, ParsedSWF* swf) {
+  Shape shape;
+	shape.shape_id = getUI16();
+	getRECT(&shape.shape_bounds); // ShapeBounds
+  if (tag->TagCode == TAG_DEFINESHAPE4) { // DefineShape4 only
+    getRECT(&shape.edge_bounds); // ShapeBounds
+    getUBits(5); // Reserved. Must be 0
+    int UsesFillWindingRule, UsesNonScalingStrokes, UsesScalingStrokes;
+    shape.uses_fill_winding_rule = getUBits(1);
+    shape.uses_non_scaling_strokes = getUBits(1);
+    shape.uses_scaling_strokes = getUBits(1);
+  }
+	getSHAPEWITHSTYLE(tag, &shape);
+  swf->shapes.push_back(shape);
+}
+
+void TinySWFParser::HandlePlaceObject23(Tag* tag, Sprite* sprite) {
+  //// PlaceObject2 SWF3 or later = 70
+//// PlaceObject3 SWF8 or later = 26
+  unsigned int PlaceFlagHasClipActions, PlaceFlagHasClipDepth, PlaceFlagHasName, PlaceFlagHasRatio, PlaceFlagHasColorTransform, PlaceFlagHasMatrix, PlaceFlagHasCharacter, PlaceFlagHasMove;
+  unsigned int PlaceFlagHasImage, PlaceFlagHasClassName, PlaceFlagHasCacheAsBitmap, PlaceFlagHasBlendMode, PlaceFlagHasFilterList;
+  unsigned int Depth, CharacterId, Ratio, ClipDepth;
+  setByteAlignment();
+  PlaceFlagHasClipActions                = getUBits(1); // SWF5 and later (sprite characters only)
+  PlaceFlagHasClipDepth                = getUBits(1);
+  PlaceFlagHasName                        = getUBits(1);
+  PlaceFlagHasRatio                        = getUBits(1);
+  PlaceFlagHasColorTransform        = getUBits(1);
+  PlaceFlagHasMatrix                        = getUBits(1);
+  PlaceFlagHasCharacter                = getUBits(1);
+  PlaceFlagHasMove                        = getUBits(1);
+
+    if (tag->TagCode == TAG_PLACEOBJECT3) {   // PlaceObject3 only
+        getUBits(3);    // Reserved, must be 0
+        PlaceFlagHasImage = getUBits(1);
+        PlaceFlagHasClassName = getUBits(1);
+        PlaceFlagHasCacheAsBitmap = getUBits(1);
+        PlaceFlagHasBlendMode = getUBits(1);
+        PlaceFlagHasFilterList = getUBits(1);
+    }
+    Depth = getUI16();
+    if (tag->TagCode == TAG_PLACEOBJECT3) {   // PlaceObject3 only
+        // ClassName : String
+        if (PlaceFlagHasClassName || (PlaceFlagHasImage & PlaceFlagHasCharacter)) {
+            tagObject["ClassName"] = getSTRING();
+        }
+    }
+        if (PlaceFlagHasCharacter) {
+                CharacterId = getUI16();
+        }
+        if (PlaceFlagHasMatrix) {
+          getMATRIX(tagObject["Matrix"]); // Transform matrix data
+        }
+        if (PlaceFlagHasColorTransform) {
+          getCXFORMWITHALPHA(tagObject["ColorTransform"]);
+        }
+        if (PlaceFlagHasRatio) {
+                Ratio = getUI16();
+        }
+        if (PlaceFlagHasName) {
+          tagObject["Name"] = getSTRING();
+        }
+        if (PlaceFlagHasClipDepth) {
+          ClipDepth = getUI16();
+        }
+    if (tag->TagCode == TAG_PLACEOBJECT3) {   // PlaceObject3 only
+        if (PlaceFlagHasFilterList) {
+            getFILTERLIST(tagObject["SurfaceFilterList"]);
+        }
+        if (PlaceFlagHasBlendMode) {
+            unsigned int BlendMode;
+            BlendMode = getUI8();
+        }
+        if (PlaceFlagHasCacheAsBitmap) {
+            unsigned int BitmapCache;
+            BitmapCache = getUI8();
+        }
+    }
+        if (PlaceFlagHasClipActions) {
+          getCLIPACTIONS(tagObject["ClipActions"]);
+        }
+    if (tag->TagCode == TAG_PLACEOBJECT3) {
+        if (tag->NextTagPos == (getStreamPos() + 1))
+            getUI8(); // FIXME: wierd padding? not sure what's wrong.
+    }
+        return TRUE;
+
 }
 
 ///////////////////////////////////////

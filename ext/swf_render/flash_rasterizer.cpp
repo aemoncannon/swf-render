@@ -281,7 +281,7 @@ namespace agg
 int render_to_buffer(const char* input_swf, unsigned char* buf, int width, int height) {
   TinySWFParser parser;
   ParsedSWF* swf = parser.parse(input_swf);
-  swf->Dump();
+//  swf->Dump();
 
   agg::compound_shape        m_shape;
   const Shape* shape = &swf->shapes[0];
@@ -350,7 +350,6 @@ int render_to_buffer(const char* input_swf, unsigned char* buf, int width, int h
       if(m_shape.style(i).line >= 0) {
         const LineStyle& style = m_shape.line_style(m_shape.style(i).line);
         const float width = (float)style.width * m_shape.m_affine.scale();
-        printf("%f\n", width);
         stroke.width(width);
         switch (style.join_style) {
         case LineStyle::kJoinRound:
