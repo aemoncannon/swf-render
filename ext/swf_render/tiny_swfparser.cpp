@@ -221,8 +221,10 @@ ParsedSWF* TinySWFParser::parseWithCallback(const char *filename, ProgressUpdate
 
         TagLength	= tag.TagLength;
         switch (TagCode) {
+        case TAG_DEFINESHAPE2:
+        case TAG_DEFINESHAPE3:
         case TAG_DEFINESHAPE4: {
-          HandleDefineShape4(&tag, swf);
+          HandleDefineShape(&tag, swf);
           break;
         }
         case TAG_DEFINESPRITE: {
@@ -260,15 +262,23 @@ int TinySWFParser::HandleDefineSprite(Tag *tag, ParsedSWF* swf) // 39 = 0x27 (SW
   Sprite sprite;
   sprite.character_id = getUI16();
   sprite.frame_count = getUI16();
-  unsigned int TagCode = 0, TagLength = 0, tagNo = 0;
+  int current_frame = 0;
+  unsigned int TagCode = 0, TagLength = 0;
   do {
     Tag tag2;
     getTagCodeAndLength(&tag2);
     TagCode = tag2.TagCode;
     TagLength = tag2.TagLength;
+
+    // TODO(aemon): Currently skipping the processing of all frames after 0.
+    if (current_frame > 0) {
+      seek(tag2.NextTagPos);
+      continue;
+    }
+
     switch (TagCode) {
     case TAG_SHOWFRAME: {
-      printf("show frame\n");
+      ++current_frame;
       seek(tag2.NextTagPos);
       break;
     }
@@ -278,13 +288,11 @@ int TinySWFParser::HandleDefineSprite(Tag *tag, ParsedSWF* swf) // 39 = 0x27 (SW
     }
     case TAG_PLACEOBJECT2:
     case TAG_PLACEOBJECT3: {
-      printf("place object\n");
-      HandlePlaceObject23(&tag2, &sprite);
+      HandlePlaceObject23(&tag2, &sprite, current_frame);
       break;
     }
     default: seek(tag2.NextTagPos);
     }
-    tagNo++;
   } while (TagCode != 0x0);
   std::sort(sprite.placements.begin(), sprite.placements.end());
   swf->character_id_to_sprite_index[sprite.character_id] = swf->sprites.size();
@@ -292,14 +300,13 @@ int TinySWFParser::HandleDefineSprite(Tag *tag, ParsedSWF* swf) // 39 = 0x27 (SW
   return TRUE;
 }
 
-void TinySWFParser::HandleDefineShape4(Tag* tag, ParsedSWF* swf) {
+void TinySWFParser::HandleDefineShape(Tag* tag, ParsedSWF* swf) {
   Shape shape;
 	shape.character_id = getUI16();
 	getRECT(&shape.shape_bounds); // ShapeBounds
   if (tag->TagCode == TAG_DEFINESHAPE4) { // DefineShape4 only
     getRECT(&shape.edge_bounds); // ShapeBounds
     getUBits(5); // Reserved. Must be 0
-    int UsesFillWindingRule, UsesNonScalingStrokes, UsesScalingStrokes;
     shape.uses_fill_winding_rule = getUBits(1);
     shape.uses_non_scaling_strokes = getUBits(1);
     shape.uses_scaling_strokes = getUBits(1);
@@ -309,7 +316,7 @@ void TinySWFParser::HandleDefineShape4(Tag* tag, ParsedSWF* swf) {
   swf->shapes.push_back(shape);
 }
 
-void TinySWFParser::HandlePlaceObject23(Tag* tag, Sprite* sprite) {
+void TinySWFParser::HandlePlaceObject23(Tag* tag, Sprite* sprite, int current_frame) {
   Placement placement;
   //// PlaceObject2 SWF3 or later = 70
 //// PlaceObject3 SWF8 or later = 26
@@ -366,6 +373,7 @@ void TinySWFParser::HandlePlaceObject23(Tag* tag, Sprite* sprite) {
           getFILTERLIST(&placement);
         }
         if (PlaceFlagHasBlendMode) {
+          assert(false);
             unsigned int BlendMode;
             BlendMode = getUI8();
         }
@@ -699,8 +707,8 @@ int TinySWFParser::getLINESTYLEARRAY(Tag *tag, std::vector<LineStyle>* styles)
             getUBits(5); // Reserved must be 0
             style.no_close         = getUBits(1);
             style.end_cap_style     = static_cast<LineStyle::CapStyle>(getUBits(2));
-            if (JoinStyle == 2) {
-                style.miter_limit_factor = getUI16();   // Miter limit factor is an 8.8 fixed-point value.
+            if (JoinStyle == LineStyle::kJoinMiter) {
+                style.miter_limit_factor = getFIXED8();   // Miter limit factor is an 8.8 fixed-point value.
             }
             if (!style.has_fill) {
                 style.rgba = getRGBA();         // Color
@@ -734,20 +742,24 @@ int TinySWFParser::getLINESTYLEARRAY(Tag *tag, std::vector<LineStyle>* styles)
 
 int TinySWFParser::getSHAPE(Tag *tag, Shape* shape)
 {
+  printf("New shape ..\n");
 	unsigned int NumFillBits = 0, NumLineBits = 0;// ShapeRecordNo = 0;
 	setByteAlignment(); // reset bit buffer for byte-alignment
 	NumFillBits = getUBits(4); // NumFillBits
 	NumLineBits = getUBits(4); // NumLineBits
     DEBUGMSG(",\nShapeRecords : [\n");
   unsigned int recNo = 0;
+
 	while(1) {
     ASSERT (getStreamPos() > tag->NextTagPos);
 		unsigned int TypeFlag = getUBits(1); // TypeFlag => 0 : Non-edge, 1: Edge Reocrds
     if (!TypeFlag) { // Non-edge Records where TypeFlag == 0
 			unsigned int Flags = getUBits(5);
 			if (Flags == 0) { // ENDSHAPERECORD
+        printf("end\n");
 				return TRUE;
 			} else { // STYLECHANGERECORD
+        printf("style change\n");
        StyleChangeRecord* record = new StyleChangeRecord();
        shape->records.push_back(record);
 				unsigned int StateNewStyles, StateLineStyle, StateFillStyle1, StateFillStyle0, StateMoveTo;
@@ -788,6 +800,7 @@ int TinySWFParser::getSHAPE(Tag *tag, Shape* shape)
 			StraightFlag = getUBits(1);
 			NumBits = getUBits(4);
 			if (StraightFlag) { // STRAIGHTEDGERECORD
+        printf("edge\n");
         EdgeRecord* record = new EdgeRecord();
         shape->records.push_back(record);
 				unsigned int GeneralLineFlag = getUBits(1);
@@ -806,6 +819,7 @@ int TinySWFParser::getSHAPE(Tag *tag, Shape* shape)
 					}
 				}
 			} else { // CURVEDEDGERECORD
+        printf("curve\n");
        CurveRecord* record = new CurveRecord();
        shape->records.push_back(record);
 				record->control_delta_x	= getSBits(NumBits + 2);

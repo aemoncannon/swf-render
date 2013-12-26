@@ -17,6 +17,7 @@ agg::rgba8 make_rgba(unsigned v);
 
 class Rect {
  public:
+  Rect() : x_min(0), y_min(0), x_max(0), y_max(0) {}
   int x_min;
   int x_max;
   int y_min;
@@ -67,7 +68,7 @@ class LineStyle {
   unsigned int pixel_hinting_flag;
   unsigned int no_close;
   CapStyle end_cap_style;
-  unsigned int miter_limit_factor;
+  float miter_limit_factor;
   unsigned int rgba;
   FillStyle fill;
   void Dump() const;
@@ -124,6 +125,8 @@ class CurveRecord : public ShapeRecord {
 
 class Shape {
  public:
+  Shape() : uses_fill_winding_rule(false), uses_non_scaling_strokes(false),
+      uses_scaling_strokes(false) {}
   int character_id;
   Rect shape_bounds;
   Rect edge_bounds;
@@ -201,8 +204,8 @@ public:
 
     int HandleSymbolClass(Tag *tag, ParsedSWF* swf);
     int HandleDefineSprite(Tag *tag, ParsedSWF* swf);
-    void HandleDefineShape4(Tag* tag, ParsedSWF* swf);
-    void HandlePlaceObject23(Tag* tag, Sprite* sprite);
+    void HandleDefineShape(Tag* tag, ParsedSWF* swf);
+    void HandlePlaceObject23(Tag* tag, Sprite* sprite, int current_frame);
     
 	//// Color Operations
 	unsigned int	getRGB();

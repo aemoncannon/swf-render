@@ -322,28 +322,32 @@ int render_shape(const ParsedSWF& swf,
       ras.reset();
       if(m_shape.style(i).line >= 0) {
         const LineStyle& style = m_shape.line_style(m_shape.style(i).line);
+        if (style.width == 0) continue;
         const float width = (float)style.width * m_shape.m_affine.scale();
         stroke.width(width);
         switch (style.join_style) {
-        case LineStyle::kJoinRound:
-          stroke.line_join(agg::round_join);
-          break;
         case LineStyle::kJoinBevel:
           stroke.line_join(agg::bevel_join);
           break;
         case LineStyle::kJoinMiter:
           stroke.line_join(agg::miter_join);
+          stroke.miter_limit(style.miter_limit_factor);
+          break;
+        case LineStyle::kJoinRound:  // Fall through
+        default:
+          stroke.line_join(agg::round_join);
           break;
         }
         switch (style.start_cap_style) {
-        case LineStyle::kCapNone:
-          stroke.line_cap(agg::butt_cap);
-          break;
         case LineStyle::kCapRound:
           stroke.line_cap(agg::round_cap);
           break;
         case LineStyle::kCapSquare:
           stroke.line_cap(agg::square_cap);
+          break;
+        case LineStyle::kCapNone:  // Fall through
+        default:
+          stroke.line_cap(agg::butt_cap);
           break;
         }
         ras.add_path(stroke, m_shape.style(i).path_id);
