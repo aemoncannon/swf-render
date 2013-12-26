@@ -155,10 +155,12 @@ ParsedSWF* TinySWFParser::parse(const char *filename)
 
 ParsedSWF* TinySWFParser::parseWithCallback(const char *filename, ProgressUpdateFunctionPtr progressUpdate)
 {
+    assert(filename);
     if (!filename) {
         return NULL;
     }
     if (!open(filename)) {
+      printf("Failed to open %s.", filename);
         return NULL;
     }
 
@@ -181,6 +183,7 @@ ParsedSWF* TinySWFParser::parseWithCallback(const char *filename, ProgressUpdate
         Tag tag;
         getTagCodeAndLength(&tag);
         TagCode		= tag.TagCode;
+
         TagLength	= tag.TagLength;
         switch (TagCode) {
         case TAG_DEFINESHAPE4: {
@@ -191,17 +194,31 @@ ParsedSWF* TinySWFParser::parseWithCallback(const char *filename, ProgressUpdate
           HandleDefineSprite(&tag, swf);
           break;
         }
+        case TAG_SYMBOLCLASS: {
+          HandleSymbolClass(&tag, swf);
+          break;
+        }
         default: seek(tag.NextTagPos);
         }
         tagNo++;
-    } while ( TagCode != 0x0); /* Parse untile END Tag(0x0) */
+    } while ( TagCode != 0x0);
     if (getStreamPos() != getFileLength()) {
-      DEBUGMSG("Fatal Error, not complete parsing, pos = %d, file length = %d\n", getStreamPos(), getFileLength());
+      printf("Fatal Error, not complete parsing, pos = %d, file length = %d\n", getStreamPos(), getFileLength());
         return NULL;
     }
     return swf;
 }
 
+int TinySWFParser::HandleSymbolClass(Tag *tag, ParsedSWF* swf)
+{
+    unsigned int NumSymbols = getUI16(); // Number of symbols that will be associtated by this tag.
+    for (int i = 0; i < NumSymbols; i++) {
+      unsigned int TagID = getUI16();
+      std::string name(getSTRING());
+      swf->class_name_to_character_id[name] = TagID;
+    }
+    return TRUE;
+}
 
 int TinySWFParser::HandleDefineSprite(Tag *tag, ParsedSWF* swf) // 39 = 0x27 (SWF3)
 {
@@ -221,7 +238,7 @@ int TinySWFParser::HandleDefineSprite(Tag *tag, ParsedSWF* swf) // 39 = 0x27 (SW
     }
     case TAG_PLACEOBJECT2:
     case TAG_PLACEOBJECT3: {
-      HandlePlaceObject23(tag, &sprite);
+      HandlePlaceObject23(&tag2, &sprite);
       break;
     }
     default: seek(tag2.NextTagPos);
@@ -235,7 +252,7 @@ int TinySWFParser::HandleDefineSprite(Tag *tag, ParsedSWF* swf) // 39 = 0x27 (SW
 
 void TinySWFParser::HandleDefineShape4(Tag* tag, ParsedSWF* swf) {
   Shape shape;
-	shape.shape_id = getUI16();
+	shape.character_id = getUI16();
 	getRECT(&shape.shape_bounds); // ShapeBounds
   if (tag->TagCode == TAG_DEFINESHAPE4) { // DefineShape4 only
     getRECT(&shape.edge_bounds); // ShapeBounds
@@ -250,6 +267,7 @@ void TinySWFParser::HandleDefineShape4(Tag* tag, ParsedSWF* swf) {
 }
 
 void TinySWFParser::HandlePlaceObject23(Tag* tag, Sprite* sprite) {
+  Placement placement;
   //// PlaceObject2 SWF3 or later = 70
 //// PlaceObject3 SWF8 or later = 26
   unsigned int PlaceFlagHasClipActions, PlaceFlagHasClipDepth, PlaceFlagHasName, PlaceFlagHasRatio, PlaceFlagHasColorTransform, PlaceFlagHasMatrix, PlaceFlagHasCharacter, PlaceFlagHasMove;
@@ -277,30 +295,31 @@ void TinySWFParser::HandlePlaceObject23(Tag* tag, Sprite* sprite) {
     if (tag->TagCode == TAG_PLACEOBJECT3) {   // PlaceObject3 only
         // ClassName : String
         if (PlaceFlagHasClassName || (PlaceFlagHasImage & PlaceFlagHasCharacter)) {
-            tagObject["ClassName"] = getSTRING();
+            const char* class_name = getSTRING();
         }
     }
         if (PlaceFlagHasCharacter) {
-                CharacterId = getUI16();
+          placement.character_id = getUI16();
         }
         if (PlaceFlagHasMatrix) {
-          getMATRIX(tagObject["Matrix"]); // Transform matrix data
+          getMATRIX(&placement.matrix); // Transform matrix data
         }
         if (PlaceFlagHasColorTransform) {
-          getCXFORMWITHALPHA(tagObject["ColorTransform"]);
+          assert(false);
+          //getCXFORMWITHALPHA(tagObject["ColorTransform"]);
         }
         if (PlaceFlagHasRatio) {
-                Ratio = getUI16();
+          Ratio = getUI16();
         }
         if (PlaceFlagHasName) {
-          tagObject["Name"] = getSTRING();
+          const char* name = getSTRING();
         }
         if (PlaceFlagHasClipDepth) {
           ClipDepth = getUI16();
         }
     if (tag->TagCode == TAG_PLACEOBJECT3) {   // PlaceObject3 only
         if (PlaceFlagHasFilterList) {
-            getFILTERLIST(tagObject["SurfaceFilterList"]);
+          getFILTERLIST(&placement);
         }
         if (PlaceFlagHasBlendMode) {
             unsigned int BlendMode;
@@ -312,14 +331,14 @@ void TinySWFParser::HandlePlaceObject23(Tag* tag, Sprite* sprite) {
         }
     }
         if (PlaceFlagHasClipActions) {
-          getCLIPACTIONS(tagObject["ClipActions"]);
+          assert(false);
+//          getCLIPACTIONS(tagObject["ClipActions"]);
         }
     if (tag->TagCode == TAG_PLACEOBJECT3) {
         if (tag->NextTagPos == (getStreamPos() + 1))
             getUI8(); // FIXME: wierd padding? not sure what's wrong.
     }
-        return TRUE;
-
+    sprite->placements.push_back(placement);
 }
 
 ///////////////////////////////////////
@@ -364,7 +383,6 @@ int TinySWFParser::getGRADIENT(Tag *tag, FillStyle* style)
                 // gradientRecord["Color"] = Color2String(Color, 1);
             }
             const float r = (float)Ratio / 255.0;
-            printf("r = %f\n", r);
             style->gradient_entries.push_back(
                 std::pair<float, agg::rgba8>(r, make_rgba(Color)));
         }
@@ -787,4 +805,72 @@ int TinySWFParser::getTagCodeAndLength(Tag *tag)
     tag->NextTagPos = tag->TagBodyOffset + TagLength; // Actually it points to the next tag
 	
 	return TRUE;
+}
+
+int TinySWFParser::getGLOWFILTER(Filter* filter)
+{
+  unsigned int InnerShadow, Knockout, CompositeSource, Passes;
+  float BlurX, BlurY, Strength;
+  filter->rgba = getRGBA();
+  BlurX = getFIXED();
+  BlurY = getFIXED();
+  Strength = getFIXED8();
+  InnerShadow = getUBits(1);
+  Knockout = getUBits(1);
+  CompositeSource = getUBits(1);
+  Passes = getUBits(5);
+  return TRUE;
+}
+
+///////////////////////////////////////////////////////////
+// filter operations above is used by getFILTERLIST() only.
+///////////////////////////////////////////////////////////
+int TinySWFParser::getFILTERLIST(Placement* placement)    // SWF8 or later
+{
+    unsigned int NumberOfFilters = getUI8();
+    if (NumberOfFilters > 0) {
+        for (int i = 0; i < NumberOfFilters; i++) {
+          Filter filter;
+          filter.filter_type = static_cast<Filter::FilterType>(getUI8());
+            switch (filter.filter_type) {
+                case Filter::kFilterDropShadow:
+                  assert(false);
+                  //getDROPSHADOWFILTER(filter["DropShadowFilter"]);
+                    break;
+                case Filter::kFilterBlur:
+                  assert(false);
+                  //getBLURFILTER(filter["BlurFilter"]);
+                    break;
+                case Filter::kFilterGlow:
+                    getGLOWFILTER(&filter);
+                    break;
+                case Filter::kFilterBevel:
+                  assert(false);
+                  //getBEVELFILTER(filter["BevelFilter"]);
+                    break;
+                case Filter::kFilterGradientGlow:
+                  assert(false);
+                  //getGRADIENTGLOWFILTER(filter["GradientGlowFilter"]);
+                    break;
+                case Filter::kFilterConvolution:
+                  assert(false);
+                  //getCONVOLUTIONFILTER(filter["ConvolutionFilter"]);
+                    break;
+                case Filter::kFilterColorMatrix:
+                  assert(false);
+                  //getCOLORMATRIXFILTER(filter["ColorMatrixFilter"]);
+                    break;
+                case Filter::kFilterGradientBevel:
+                  assert(false);
+                  //getGRADIENTBEVELFILTER(filter["GradientBevelFilter"]);
+                    break;
+                default:
+                    printf("Undefined FilterID(%d) - Fatal Error", filter.filter_type); // Assert
+                    assert(false);
+                    return FALSE;
+            } // switch
+            placement->filters.push_back(filter);
+        } // for
+    }
+    return TRUE;
 }

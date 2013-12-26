@@ -281,8 +281,8 @@ namespace agg
 int render_to_buffer(const char* input_swf, unsigned char* buf, int width, int height) {
   TinySWFParser parser;
   ParsedSWF* swf = parser.parse(input_swf);
-//  swf->Dump();
-
+  //swf->Dump();
+  assert(swf);
   agg::compound_shape        m_shape;
   const Shape* shape = &swf->shapes[0];
   m_shape.set_shape(shape);

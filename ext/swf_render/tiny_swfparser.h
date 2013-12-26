@@ -4,6 +4,7 @@
 #include "agg_trans_affine.h"
 #include "agg_color_rgba.h"
 #include <vector>
+#include <map>
 #include <assert.h>
 
 
@@ -123,7 +124,7 @@ class CurveRecord : public ShapeRecord {
 
 class Shape {
  public:
-  unsigned int shape_id;
+  int character_id;
   Rect shape_bounds;
   Rect edge_bounds;
   bool uses_fill_winding_rule;
@@ -135,10 +136,35 @@ class Shape {
   void Dump() const;
 };
 
+class Filter {
+ public:
+  enum FilterType {
+    kFilterDropShadow,
+    kFilterBlur,
+    kFilterGlow,
+    kFilterBevel,
+    kFilterGradientGlow,
+    kFilterConvolution,
+    kFilterColorMatrix,
+    kFilterGradientBevel
+  };
+  FilterType filter_type;
+  unsigned int rgba;
+};
+
+class Placement {
+ public:
+  Placement() : character_id(-1) {}
+  int character_id;
+  std::vector<Filter> filters;
+  Matrix matrix;
+};
+
 class Sprite {
  public:
   unsigned int character_id;
   unsigned int frame_count;
+  std::vector<Placement> placements;
   void Dump() const {}
 };
 
@@ -149,6 +175,7 @@ class ParsedSWF {
   unsigned int frame_count;
   std::vector<Shape> shapes;
   std::vector<Sprite> sprites;
+  std::map<std::string, int> class_name_to_character_id;
   void Dump() const;
 };
 
@@ -164,6 +191,7 @@ public:
     ParsedSWF* parse(const char *filename);
     ParsedSWF* parseWithCallback(const char *filename, ProgressUpdateFunctionPtr progressUpdate);
 
+    int HandleSymbolClass(Tag *tag, ParsedSWF* swf);
     int HandleDefineSprite(Tag *tag, ParsedSWF* swf);
     void HandleDefineShape4(Tag* tag, ParsedSWF* swf);
     void HandlePlaceObject23(Tag* tag, Sprite* sprite);
@@ -224,7 +252,7 @@ public:
 	unsigned int    getCLIPACTIONRECORD(VObject &clipActionRecordObject);
 	int             getCLIPACTIONS(VObject &clipActionsObject);
     //// Filters
-    int             getFILTERLIST(VObject &filterlistObject);    // SWF8 or later
+    int             getFILTERLIST(Placement* placement);    // SWF8 or later
 	
     //// SOUNDINFO
     int             getSOUNDINFO(VObject &soundInfoObject);
@@ -240,7 +268,7 @@ private:
     int             getCONVOLUTIONFILTER(VObject &filterObject);
     int             getBLURFILTER(VObject &filterObject);
     int             getDROPSHADOWFILTER(VObject &filterObject);
-    int             getGLOWFILTER(VObject &filterObject);
+    int             getGLOWFILTER(Filter* filter);
     int             getBEVELFILTER(VObject &filterObject);
     int             getGRADIENTGLOWFILTER(VObject &filterObject);
     int             getGRADIENTBEVELFILTER(VObject &filterObject);
