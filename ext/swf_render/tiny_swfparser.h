@@ -175,6 +175,8 @@ class ParsedSWF {
   unsigned int frame_count;
   std::vector<Shape> shapes;
   std::vector<Sprite> sprites;
+  std::map<int, int> character_id_to_shape_index;
+  std::map<int, int> character_id_to_sprite_index;
   std::map<std::string, int> class_name_to_character_id;
   void Dump() const;
 };

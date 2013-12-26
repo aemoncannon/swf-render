@@ -245,10 +245,10 @@ int TinySWFParser::HandleDefineSprite(Tag *tag, ParsedSWF* swf) // 39 = 0x27 (SW
     }
     tagNo++;
   } while (TagCode != 0x0);
+  swf->character_id_to_sprite_index[sprite.character_id] = swf->sprites.size();
   swf->sprites.push_back(sprite);
   return TRUE;
 }
-
 
 void TinySWFParser::HandleDefineShape4(Tag* tag, ParsedSWF* swf) {
   Shape shape;
@@ -263,6 +263,7 @@ void TinySWFParser::HandleDefineShape4(Tag* tag, ParsedSWF* swf) {
     shape.uses_scaling_strokes = getUBits(1);
   }
 	getSHAPEWITHSTYLE(tag, &shape);
+  swf->character_id_to_shape_index[shape.character_id] = swf->shapes.size();
   swf->shapes.push_back(shape);
 }
 

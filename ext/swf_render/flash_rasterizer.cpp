@@ -278,54 +278,26 @@ namespace agg
 
 }  // namespace agg
 
-int render_to_buffer(const char* input_swf, unsigned char* buf, int width, int height) {
-  TinySWFParser parser;
-  ParsedSWF* swf = parser.parse(input_swf);
-  //swf->Dump();
-  assert(swf);
-  agg::compound_shape        m_shape;
-  const Shape* shape = &swf->shapes[0];
-  m_shape.set_shape(shape);
-
-  agg::trans_affine          m_scale;
-
   typedef agg::pixfmt_bgra32_pre pixfmt;
-
-  agg::rendering_buffer rbuf;
-  rbuf.attach(buf, width, height, width * 4);
-
   typedef agg::renderer_base<pixfmt> renderer_base;
   typedef agg::renderer_scanline_aa_solid<renderer_base> renderer_scanline;
   typedef agg::scanline_u8 scanline;
 
-  pixfmt pixf(rbuf);
-  renderer_base ren_base(pixf);
-//  ren_base.clear(agg::rgba(1.0, 1.0, 1.0));
-  renderer_scanline ren(ren_base);
-
-  unsigned i;
-  unsigned w = unsigned(width);
-
-  // m_shape.m_affine.scale(0.1, 0.1);
-  // m_shape.m_affine.translate(100, 200);
-
-  const int x1 = shape->shape_bounds.x_min - 10;
-  const int x2 = shape->shape_bounds.x_max + 10;
-  const int y1 = shape->shape_bounds.y_min - 50;
-  const int y2 = shape->shape_bounds.y_max + 50;
-  agg::trans_viewport vp;
-  vp.preserve_aspect_ratio(0.5, 0.5, agg::aspect_ratio_meet);
-  vp.world_viewport(x1, y1, x2, y2);
-  vp.device_viewport(0, 0, width, height);
-  m_shape.m_affine = vp.to_affine();
-
+int render_shape(const Shape& shape, const Matrix& transform,
+                 int clip_width, int clip_height,
+                 renderer_base& ren_base,
+                 renderer_scanline& ren) {
+  agg::compound_shape  m_shape;
+  m_shape.set_shape(&shape);
+  m_shape.m_affine = transform;
   m_shape.read_next();
   do {
-//    m_shape.scale(width, height);
+//    m_shape.scale(clip_width, height);
     agg::rasterizer_scanline_aa<agg::rasterizer_sl_clip_dbl> ras;
     agg::rasterizer_compound_aa<agg::rasterizer_sl_clip_dbl> rasc;
     agg::scanline_u8 sl;
     agg::scanline_bin sl_bin;
+    Matrix m_scale;
     agg::conv_transform<agg::compound_shape> shape(m_shape, m_scale);
     agg::conv_stroke<agg::conv_transform<agg::compound_shape> > stroke(shape);
     agg::span_allocator<agg::rgba8> alloc;
@@ -333,7 +305,7 @@ int render_to_buffer(const char* input_swf, unsigned char* buf, int width, int h
 //    printf("Filling shapes.\n");
     // Fill shape
     //----------------------
-    rasc.clip_box(0, 0, width, height);
+    rasc.clip_box(0, 0, clip_width, clip_height);
     rasc.reset();
     rasc.layer_order(agg::layer_direct);
     for(int i = 0; i < m_shape.paths(); i++)
@@ -344,7 +316,7 @@ int render_to_buffer(const char* input_swf, unsigned char* buf, int width, int h
     }
     agg::render_scanlines_compound(rasc, sl, sl_bin, ren_base, alloc, m_shape);
 
-    ras.clip_box(0, 0, width, height);
+    ras.clip_box(0, 0, clip_width, clip_height);
     for(int i = 0; i < m_shape.paths(); i++) {
       ras.reset();
       if(m_shape.style(i).line >= 0) {
@@ -379,7 +351,36 @@ int render_to_buffer(const char* input_swf, unsigned char* buf, int width, int h
       }
     }
   } while (m_shape.read_next());
-  return 1;
+  return 0;
+}
+
+int render_to_buffer(const char* input_swf, unsigned char* buf, int width, int height) {
+  TinySWFParser parser;
+  ParsedSWF* swf = parser.parse(input_swf);
+  //swf->Dump();
+  assert(swf);
+
+  const Shape* shape = &swf->shapes[0];
+  const int x1 = shape->shape_bounds.x_min - 10;
+  const int x2 = shape->shape_bounds.x_max + 10;
+  const int y1 = shape->shape_bounds.y_min - 50;
+  const int y2 = shape->shape_bounds.y_max + 50;
+  agg::trans_viewport vp;
+  vp.preserve_aspect_ratio(0.5, 0.5, agg::aspect_ratio_meet);
+  vp.world_viewport(x1, y1, x2, y2);
+  vp.device_viewport(0, 0, width, height);
+  const Matrix view_transform = vp.to_affine();
+
+  agg::rendering_buffer rbuf;
+  rbuf.attach(buf, width, height, width * 4);
+  pixfmt pixf(rbuf);
+  renderer_base ren_base(pixf);
+//  ren_base.clear(agg::rgba(1.0, 1.0, 1.0));
+  renderer_scanline ren(ren_base);
+
+  render_shape(swf->shapes[0], view_transform, width, height, ren_base, ren);
+
+  return 0;
 }
 
 int render_to_png_file(const char* input_swf, const char* output_png) {
