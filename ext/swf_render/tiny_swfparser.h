@@ -178,6 +178,10 @@ class ParsedSWF {
   std::map<int, int> character_id_to_shape_index;
   std::map<int, int> character_id_to_sprite_index;
   std::map<std::string, int> class_name_to_character_id;
+  const Sprite* SpriteByClassName(const char* class_name) const;
+  const Sprite* SpriteByCharacterId(int character_id) const;
+  const Shape* ShapeByCharacterId(int character_id) const;
+
   void Dump() const;
 };
 

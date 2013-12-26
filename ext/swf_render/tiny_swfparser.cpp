@@ -141,6 +141,41 @@ void ParsedSWF::Dump() const {
   printf(")");
 }
 
+const Sprite* ParsedSWF::SpriteByCharacterId(int character_id) const {
+  auto it = character_id_to_sprite_index.find(character_id);
+  if (it != character_id_to_sprite_index.end()) {
+    const int index = it->second;
+    return &sprites.at(index);
+  }
+  return NULL;
+}
+
+const Shape* ParsedSWF::ShapeByCharacterId(int character_id) const {
+  auto it = character_id_to_shape_index.find(character_id);
+  if (it != character_id_to_shape_index.end()) {
+    const int index = it->second;
+    return &shapes.at(index);
+  }
+  return NULL;
+}
+
+const Sprite* ParsedSWF::SpriteByClassName(const char* class_name) const {
+  std::map<std::string, int>::const_iterator it;
+  std::string ending(class_name);
+  for (it = class_name_to_character_id.begin();
+       it != class_name_to_character_id.end(); ++it) {
+    if (it->first.length() >= ending.length()) {
+      if (0 == it->first.compare(it->first.length() - ending.length(), ending.length(), ending)) {
+        const int character_id = it->second;
+        if (const Sprite* sprite = SpriteByCharacterId(character_id)) {
+          return sprite;
+        }
+      }
+    }
+  }
+  return NULL;
+}
+
 TinySWFParser::TinySWFParser()
 {}
 
@@ -301,6 +336,7 @@ void TinySWFParser::HandlePlaceObject23(Tag* tag, Sprite* sprite) {
     }
         if (PlaceFlagHasCharacter) {
           placement.character_id = getUI16();
+          printf("place id %d\n", placement.character_id);
         }
         if (PlaceFlagHasMatrix) {
           getMATRIX(&placement.matrix); // Transform matrix data

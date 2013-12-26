@@ -9,7 +9,7 @@
 extern "C" VALUE SWFRender = Qnil;
 
 extern "C" void Init_swf_render();
-extern "C" VALUE method_render(VALUE self, VALUE swf_name, VALUE width, VALUE height);
+extern "C" VALUE method_render(VALUE self, VALUE swf_name, VALUE class_name, VALUE width, VALUE height);
 
 // Initial setup function, takes no arguments and returns nothing. Some API
 // notes:
@@ -25,7 +25,7 @@ extern "C" VALUE method_render(VALUE self, VALUE swf_name, VALUE width, VALUE he
 // 
 void Init_swf_render() {
   SWFRender = rb_define_module("SWFRender");
-  rb_define_singleton_method(SWFRender, "render", (VALUE(*)(...))method_render, 3);
+  rb_define_singleton_method(SWFRender, "render", (VALUE(*)(...))method_render, 4);
 
 }
 
@@ -40,10 +40,11 @@ void Init_swf_render() {
 // * INT2NUM converts a C int to a Ruby Fixnum object
 // * rb_ary_store(VALUE, int, VALUE) sets the nth element of a Ruby array
 // 
-VALUE method_render(VALUE self, VALUE swf_name, VALUE width, VALUE height) {
+VALUE method_render(VALUE self, VALUE swf_name, VALUE class_name, VALUE width, VALUE height) {
   unsigned char* result;
   size_t result_size;
   render_to_png_buffer(RSTRING_PTR(swf_name),
+                       RSTRING_PTR(class_name),
                        NUM2INT(width),
                        NUM2INT(height),
                        &result,

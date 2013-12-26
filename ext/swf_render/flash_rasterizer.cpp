@@ -283,7 +283,8 @@ namespace agg
   typedef agg::renderer_scanline_aa_solid<renderer_base> renderer_scanline;
   typedef agg::scanline_u8 scanline;
 
-int render_shape(const Shape& shape, const Matrix& transform,
+int render_shape(const ParsedSWF& swf,
+                 const Shape& shape, const Matrix& transform,
                  int clip_width, int clip_height,
                  renderer_base& ren_base,
                  renderer_scanline& ren) {
@@ -354,7 +355,30 @@ int render_shape(const Shape& shape, const Matrix& transform,
   return 0;
 }
 
-int render_to_buffer(const char* input_swf, unsigned char* buf, int width, int height) {
+int render_sprite(const ParsedSWF& swf,
+                  const Sprite& sprite,
+                  const Matrix& transform,
+                  int clip_width,
+                  int clip_height,
+                  renderer_base& ren_base,
+                  renderer_scanline& ren) {
+  for (auto it = sprite.placements.begin(); it != sprite.placements.end(); ++it) {
+    const Placement& placement = *it;
+    Matrix m(transform);
+    m.premultiply(placement.matrix);
+    if (const Sprite* sprite = swf.SpriteByCharacterId(placement.character_id)) {
+      printf("rendering sub-sprite %d", placement.character_id);
+      render_sprite(swf, *sprite, m, clip_width, clip_height, ren_base, ren);
+    }
+    if (const Shape* shape = swf.ShapeByCharacterId(placement.character_id)) {
+      printf("rendering sprite shape %d\n", placement.character_id);
+      render_shape(swf, *shape, m, clip_width, clip_height, ren_base, ren);
+    }
+  }
+  return 0;
+}
+
+int render_to_buffer(const char* input_swf, const char* class_name, unsigned char* buf, int width, int height) {
   TinySWFParser parser;
   ParsedSWF* swf = parser.parse(input_swf);
   //swf->Dump();
@@ -378,16 +402,18 @@ int render_to_buffer(const char* input_swf, unsigned char* buf, int width, int h
 //  ren_base.clear(agg::rgba(1.0, 1.0, 1.0));
   renderer_scanline ren(ren_base);
 
-  render_shape(swf->shapes[0], view_transform, width, height, ren_base, ren);
+  if (const Sprite* sprite = swf->SpriteByClassName(class_name)) {
+    render_sprite(*swf, *sprite, view_transform, width, height, ren_base, ren);
+  }
 
   return 0;
 }
 
-int render_to_png_file(const char* input_swf, const char* output_png) {
+int render_to_png_file(const char* input_swf, const char* class_name, const char* output_png) {
   int width = 1200;
   int height = 800;
   unsigned char* buf = new unsigned char[width * height * 4];
-  render_to_buffer(input_swf, buf, width, height);
+  render_to_buffer(input_swf, class_name, buf, width, height);
   unsigned error = lodepng_encode32_file(output_png, buf, width, height);
   if(error) {
     printf("Error %u: %s\n", error, lodepng_error_text(error));
@@ -398,12 +424,13 @@ int render_to_png_file(const char* input_swf, const char* output_png) {
 }
 
 int render_to_png_buffer(const char* input_swf,
+                         const char* class_name,
                          int width,
                          int height,
                          unsigned char** out,
                          size_t* outsize) {
   unsigned char* buf = new unsigned char[width * height * 4];
-  render_to_buffer(input_swf, buf, width, height);
+  render_to_buffer(input_swf, class_name, buf, width, height);
   unsigned error = lodepng_encode32(out, outsize, buf, width, height);
   if(error) {
     printf("Error %u: %s\n", error, lodepng_error_text(error));
@@ -418,6 +445,6 @@ int main(int argc, char* argv[]) {
     fprintf(stderr, "usage: %s file.swf\n", argv[0]);
     return TRUE;
   }
-  return render_to_png_file(argv[1], "out.png");
+  return render_to_png_file(argv[1], argv[2], "out.png");
 }
 
