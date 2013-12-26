@@ -707,7 +707,7 @@ int TinySWFParser::getLINESTYLEARRAY(Tag *tag, std::vector<LineStyle>* styles)
             getUBits(5); // Reserved must be 0
             style.no_close         = getUBits(1);
             style.end_cap_style     = static_cast<LineStyle::CapStyle>(getUBits(2));
-            if (JoinStyle == LineStyle::kJoinMiter) {
+            if (style.join_style == LineStyle::kJoinMiter) {
                 style.miter_limit_factor = getFIXED8();   // Miter limit factor is an 8.8 fixed-point value.
             }
             if (!style.has_fill) {
@@ -742,7 +742,6 @@ int TinySWFParser::getLINESTYLEARRAY(Tag *tag, std::vector<LineStyle>* styles)
 
 int TinySWFParser::getSHAPE(Tag *tag, Shape* shape)
 {
-  printf("New shape ..\n");
 	unsigned int NumFillBits = 0, NumLineBits = 0;// ShapeRecordNo = 0;
 	setByteAlignment(); // reset bit buffer for byte-alignment
 	NumFillBits = getUBits(4); // NumFillBits
@@ -756,10 +755,8 @@ int TinySWFParser::getSHAPE(Tag *tag, Shape* shape)
     if (!TypeFlag) { // Non-edge Records where TypeFlag == 0
 			unsigned int Flags = getUBits(5);
 			if (Flags == 0) { // ENDSHAPERECORD
-        printf("end\n");
 				return TRUE;
 			} else { // STYLECHANGERECORD
-        printf("style change\n");
        StyleChangeRecord* record = new StyleChangeRecord();
        shape->records.push_back(record);
 				unsigned int StateNewStyles, StateLineStyle, StateFillStyle1, StateFillStyle0, StateMoveTo;
@@ -800,7 +797,6 @@ int TinySWFParser::getSHAPE(Tag *tag, Shape* shape)
 			StraightFlag = getUBits(1);
 			NumBits = getUBits(4);
 			if (StraightFlag) { // STRAIGHTEDGERECORD
-        printf("edge\n");
         EdgeRecord* record = new EdgeRecord();
         shape->records.push_back(record);
 				unsigned int GeneralLineFlag = getUBits(1);
@@ -819,7 +815,6 @@ int TinySWFParser::getSHAPE(Tag *tag, Shape* shape)
 					}
 				}
 			} else { // CURVEDEDGERECORD
-        printf("curve\n");
        CurveRecord* record = new CurveRecord();
        shape->records.push_back(record);
 				record->control_delta_x	= getSBits(NumBits + 2);
