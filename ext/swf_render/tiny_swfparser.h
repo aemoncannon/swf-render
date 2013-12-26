@@ -154,8 +154,10 @@ class Filter {
 
 class Placement {
  public:
-  Placement() : character_id(-1) {}
+  Placement() : character_id(-1), depth(-1) {}
+  bool operator<(const Placement& other) const { return depth < other.depth; }
   int character_id;
+  int depth;
   std::vector<Filter> filters;
   Matrix matrix;
 };

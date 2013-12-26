@@ -267,12 +267,18 @@ int TinySWFParser::HandleDefineSprite(Tag *tag, ParsedSWF* swf) // 39 = 0x27 (SW
     TagCode = tag2.TagCode;
     TagLength = tag2.TagLength;
     switch (TagCode) {
+    case TAG_SHOWFRAME: {
+      printf("show frame\n");
+      seek(tag2.NextTagPos);
+      break;
+    }
     case TAG_PLACEOBJECT: {
       assert(false);
       break;
     }
     case TAG_PLACEOBJECT2:
     case TAG_PLACEOBJECT3: {
+      printf("place object\n");
       HandlePlaceObject23(&tag2, &sprite);
       break;
     }
@@ -280,6 +286,7 @@ int TinySWFParser::HandleDefineSprite(Tag *tag, ParsedSWF* swf) // 39 = 0x27 (SW
     }
     tagNo++;
   } while (TagCode != 0x0);
+  std::sort(sprite.placements.begin(), sprite.placements.end());
   swf->character_id_to_sprite_index[sprite.character_id] = swf->sprites.size();
   swf->sprites.push_back(sprite);
   return TRUE;
@@ -327,7 +334,7 @@ void TinySWFParser::HandlePlaceObject23(Tag* tag, Sprite* sprite) {
         PlaceFlagHasBlendMode = getUBits(1);
         PlaceFlagHasFilterList = getUBits(1);
     }
-    Depth = getUI16();
+    placement.depth = getUI16();
     if (tag->TagCode == TAG_PLACEOBJECT3) {   // PlaceObject3 only
         // ClassName : String
         if (PlaceFlagHasClassName || (PlaceFlagHasImage & PlaceFlagHasCharacter)) {
@@ -336,7 +343,6 @@ void TinySWFParser::HandlePlaceObject23(Tag* tag, Sprite* sprite) {
     }
         if (PlaceFlagHasCharacter) {
           placement.character_id = getUI16();
-          printf("place id %d\n", placement.character_id);
         }
         if (PlaceFlagHasMatrix) {
           getMATRIX(&placement.matrix); // Transform matrix data
@@ -352,6 +358,7 @@ void TinySWFParser::HandlePlaceObject23(Tag* tag, Sprite* sprite) {
           const char* name = getSTRING();
         }
         if (PlaceFlagHasClipDepth) {
+          assert(false);
           ClipDepth = getUI16();
         }
     if (tag->TagCode == TAG_PLACEOBJECT3) {   // PlaceObject3 only
@@ -375,7 +382,12 @@ void TinySWFParser::HandlePlaceObject23(Tag* tag, Sprite* sprite) {
         if (tag->NextTagPos == (getStreamPos() + 1))
             getUI8(); // FIXME: wierd padding? not sure what's wrong.
     }
+
+  if (PlaceFlagHasMove) {
+    printf("Oops. Placeobject has move. See SWF format p.35\n");
+  } else {
     sprite->placements.push_back(placement);
+  }
 }
 
 ///////////////////////////////////////

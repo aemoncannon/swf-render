@@ -367,11 +367,9 @@ int render_sprite(const ParsedSWF& swf,
     Matrix m(transform);
     m.premultiply(placement.matrix);
     if (const Sprite* sprite = swf.SpriteByCharacterId(placement.character_id)) {
-      printf("rendering sub-sprite %d", placement.character_id);
       render_sprite(swf, *sprite, m, clip_width, clip_height, ren_base, ren);
     }
     if (const Shape* shape = swf.ShapeByCharacterId(placement.character_id)) {
-      printf("rendering sprite shape %d\n", placement.character_id);
       render_shape(swf, *shape, m, clip_width, clip_height, ren_base, ren);
     }
   }
