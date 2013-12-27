@@ -140,6 +140,8 @@ namespace agg
                 // This marks the beginning of a new grouping.
                 if (sc->HasNewStyles() && i != m_record_index) {
                   m_record_index = i;
+                  // We need to draw strokes in order of their line style.
+                  // See: http://wahlers.com.br/claus/blog/hacking-swf-1-shapes-in-flash/
                   std::sort(m_styles.begin(), m_styles.end());
                   return true;
                 }
@@ -384,7 +386,7 @@ int render_sprite(const ParsedSWF& swf,
 int render_to_buffer(const char* input_swf, const char* class_name, unsigned char* buf, int width, int height) {
   TinySWFParser parser;
   ParsedSWF* swf = parser.parse(input_swf);
-  //swf->Dump();
+  swf->Dump();
   assert(swf);
 
   const Shape* shape = &swf->shapes[0];

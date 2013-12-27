@@ -51,7 +51,7 @@ agg::rgba8 FillStyle::gradient_color(double grad_x, double grad_y) const {
   }
   const double r = (pos - left_pos) / (right_pos - left_pos);
   agg::rgba8 color = left_color.gradient(right_color, r);
-//  color.premultiply();
+  //color.premultiply();
   return color;
 }
 
@@ -633,9 +633,6 @@ int TinySWFParser::getFILLSTYLE(Tag *tag, FillStyle* style)
         if ((tag->TagCode == TAG_DEFINESHAPE) || (tag->TagCode == TAG_DEFINESHAPE2)) {
           style->rgba = getRGB();   // DefineShape/DefineShape2
         } else {
-          if (tag->TagCode == TAG_DEFINESHAPE3) {
-            printf("%x\n", getRGBA());
-          }
           style->rgba = getRGBA();  // DefineShape3 or 4?
         }
     }
