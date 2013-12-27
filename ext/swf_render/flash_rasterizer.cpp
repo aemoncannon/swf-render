@@ -37,6 +37,7 @@ namespace agg
       int right_fill;
       int line;
       bool new_styles;
+      bool operator<(const path_style& other) const { return line < other.line; }
     };
 
 
@@ -121,7 +122,7 @@ namespace agg
         bool read_next()
         {
             m_path.remove_all();
-            m_styles.remove_all();
+            m_styles.clear();
             int last_move_y = 0;
             int last_move_x = 0;
             int last_fill0 = -1;
@@ -139,6 +140,7 @@ namespace agg
                 // This marks the beginning of a new grouping.
                 if (sc->HasNewStyles() && i != m_record_index) {
                   m_record_index = i;
+                  std::sort(m_styles.begin(), m_styles.end());
                   return true;
                 }
 
@@ -181,7 +183,7 @@ namespace agg
                 } else {
                   m_path.move_to(last_move_x, last_move_y);
                 }
-                m_styles.add(style);
+                m_styles.push_back(style);
                 break;
               }
               case ShapeRecord::kCurve: {
@@ -266,10 +268,9 @@ namespace agg
 
     private:
         path_storage                              m_path;
-
         conv_curve<path_storage>                  m_curve;
         conv_transform<conv_curve<path_storage> > m_trans;
-        pod_bvector<path_style>                   m_styles;
+        std::vector<path_style>                   m_styles;
         double                                    m_x1, m_y1, m_x2, m_y2;
         int m_record_index;
 
@@ -278,7 +279,7 @@ namespace agg
 
 }  // namespace agg
 
-  typedef agg::pixfmt_bgra32_pre pixfmt;
+  typedef agg::pixfmt_bgra32 pixfmt;
   typedef agg::renderer_base<pixfmt> renderer_base;
   typedef agg::renderer_scanline_aa_solid<renderer_base> renderer_scanline;
   typedef agg::scanline_u8 scanline;
@@ -350,8 +351,8 @@ int render_shape(const ParsedSWF& swf,
           stroke.line_cap(agg::butt_cap);
           break;
         }
-        ras.add_path(stroke, m_shape.style(i).path_id);
         ren.color(make_rgba(style.rgba));
+        ras.add_path(stroke, m_shape.style(i).path_id);
         agg::render_scanlines(ras, sl, ren);
       }
     }
@@ -406,6 +407,11 @@ int render_to_buffer(const char* input_swf, const char* class_name, unsigned cha
 
   if (const Sprite* sprite = swf->SpriteByClassName(class_name)) {
     render_sprite(*swf, *sprite, view_transform, width, height, ren_base, ren);
+  } else {
+    assert(swf->shapes.size());
+    for (auto it = swf->shapes.begin(); it != swf->shapes.end(); ++it) {
+      render_shape(*swf, *it, view_transform, width, height, ren_base, ren);
+    }
   }
 
   return 0;

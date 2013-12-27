@@ -51,7 +51,7 @@ agg::rgba8 FillStyle::gradient_color(double grad_x, double grad_y) const {
   }
   const double r = (pos - left_pos) / (right_pos - left_pos);
   agg::rgba8 color = left_color.gradient(right_color, r);
-  color.premultiply();
+//  color.premultiply();
   return color;
 }
 
@@ -631,29 +631,30 @@ int TinySWFParser::getFILLSTYLE(Tag *tag, FillStyle* style)
     style->type = static_cast<FillStyle::Type>(FillStyleType);
     if (FillStyleType == 0x00) { // Solid Color Fill
         if ((tag->TagCode == TAG_DEFINESHAPE) || (tag->TagCode == TAG_DEFINESHAPE2)) {
-            style->rgba = getRGB();   // DefineShape/DefineShape2
+          style->rgba = getRGB();   // DefineShape/DefineShape2
         } else {
-            style->rgba = getRGBA();  // DefineShape3 or 4?
+          if (tag->TagCode == TAG_DEFINESHAPE3) {
+            printf("%x\n", getRGBA());
+          }
+          style->rgba = getRGBA();  // DefineShape3 or 4?
         }
     }
     if ((FillStyleType == 0x10) ||
         (FillStyleType == 0x12) ||
         (FillStyleType == 0x13)) { // Gradient Fill
-        getMATRIX(&style->matrix); // GradientMatrix
+        getMATRIX(&style->matrix);
         if ((FillStyleType == 0x10) ||
             (FillStyleType == 0x12)) {
             getGRADIENT(tag, style);
         } else { // 0x13
             getFOCALGRADIENT(tag, style); // SWF8 or later
         }
-        //DEBUGMSG("} // Gradient Fill\n");
     }
     if ((FillStyleType == 0x40) ||
         (FillStyleType == 0x41) ||
         (FillStyleType == 0x42) ||
         (FillStyleType == 0x43)) { // Bitmap Fill
         unsigned int BitmapId = getUI16();
-        // TODO(aemon): Save bitmap id and matrix.
         Matrix matrix;
         getMATRIX(&style->matrix); // Matrix for bitmap fill
     }
