@@ -433,7 +433,7 @@ int TinySWFParser::getGRADIENT(Tag *tag, FillStyle* style)
             Ratio = getUI8();
             // gradientRecord["Ratio"] = Ratio;
             if ((tag->TagCode == TAG_DEFINESHAPE) || (tag->TagCode == TAG_DEFINESHAPE2)) {
-                Color = getRGB(); // for DefineShape and DefineShape2
+                Color = (0xFF << 24) | getRGB(); // for DefineShape and DefineShape2
                 // gradientRecord["Color"] = Color2String(Color, 0);
             } else {
                 Color = getRGBA(); // for DefineShape3 or later?
@@ -631,7 +631,7 @@ int TinySWFParser::getFILLSTYLE(Tag *tag, FillStyle* style)
     style->type = static_cast<FillStyle::Type>(FillStyleType);
     if (FillStyleType == 0x00) { // Solid Color Fill
         if ((tag->TagCode == TAG_DEFINESHAPE) || (tag->TagCode == TAG_DEFINESHAPE2)) {
-          style->rgba = getRGB();   // DefineShape/DefineShape2
+          style->rgba = (0xFF << 24) | getRGB();   // DefineShape/DefineShape2
         } else {
           style->rgba = getRGBA();  // DefineShape3 or 4?
         }
@@ -725,7 +725,7 @@ int TinySWFParser::getLINESTYLEARRAY(Tag *tag, std::vector<LineStyle>* styles)
             if (tag->TagCode == TAG_DEFINESHAPE3) { // DefineShape3
                 style.rgba = getRGBA();
             } else {
-                style.rgba = getRGB();   // DefineShape1/2
+                style.rgba = (0xFF << 24) | getRGB();   // DefineShape1/2
             }
             styles->push_back(style);
         }

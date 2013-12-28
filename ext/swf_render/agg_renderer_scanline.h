@@ -597,13 +597,14 @@ namespace agg
                                         covers = span_aa->covers;
                                         do
                                         {
-                                            if(*covers == cover_full) 
+                                            if(*covers == cover_full)
                                             {
-                                                *colors = c;
+                                              *colors = c;
                                             }
                                             else
                                             {
-                                                colors->add(c, *covers);
+                                              *colors = c;
+                                              //colors->add(c, *covers);
                                             }
                                             ++colors;
                                             ++covers;
@@ -622,15 +623,15 @@ namespace agg
                                         len = span_aa->len;
                                         colors = mix_buffer + span_aa->x - min_x;
                                         cspan  = color_span;
-                                        sh.generate_span(cspan, 
-                                                         span_aa->x, 
-                                                         sl_aa.y(), 
-                                                         len, 
+                                        sh.generate_span(cspan,
+                                                         span_aa->x,
+                                                         sl_aa.y(),
+                                                         len,
                                                          style);
                                         covers = span_aa->covers;
                                         do
                                         {
-                                            if(*covers == cover_full) 
+                                            if(*covers == cover_full)
                                             {
                                                 *colors = *cspan;
                                             }

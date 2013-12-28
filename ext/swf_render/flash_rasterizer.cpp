@@ -413,6 +413,7 @@ int render_to_buffer(const char* input_swf, const char* class_name, unsigned cha
   } else {
     assert(swf->shapes.size());
     for (auto it = swf->shapes.begin(); it != swf->shapes.end(); ++it) {
+      printf("rendering shape");
       render_shape(*swf, *it, view_transform, width, height, ren_base, ren);
     }
   }
