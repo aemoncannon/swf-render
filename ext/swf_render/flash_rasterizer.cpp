@@ -121,6 +121,7 @@ namespace agg
         // Advance to next simple shape (no groups, no overlapping)
         bool read_next()
         {
+          if (m_record_index >= m_shape->records.size()) return false;
             m_path.remove_all();
             m_styles.clear();
             int last_move_y = 0;
@@ -212,7 +213,8 @@ namespace agg
               }
               }
             }
-            return false;
+            m_record_index = m_shape->records.size();
+            return true;
         }
 
 
@@ -294,8 +296,7 @@ int render_shape(const ParsedSWF& swf,
   agg::compound_shape  m_shape;
   m_shape.set_shape(&shape);
   m_shape.m_affine = transform;
-  m_shape.read_next();
-  do {
+  while (m_shape.read_next()) {
 //    m_shape.scale(clip_width, height);
     agg::rasterizer_scanline_aa<agg::rasterizer_sl_clip_dbl> ras;
     agg::rasterizer_compound_aa<agg::rasterizer_sl_clip_dbl> rasc;
@@ -358,7 +359,7 @@ int render_shape(const ParsedSWF& swf,
         agg::render_scanlines(ras, sl, ren);
       }
     }
-  } while (m_shape.read_next());
+  }
   return 0;
 }
 
@@ -386,7 +387,7 @@ int render_sprite(const ParsedSWF& swf,
 int render_to_buffer(const char* input_swf, const char* class_name, unsigned char* buf, int width, int height) {
   TinySWFParser parser;
   ParsedSWF* swf = parser.parse(input_swf);
-  swf->Dump();
+//  swf->Dump();
   assert(swf);
 
   const Shape* shape = &swf->shapes[0];
@@ -404,7 +405,7 @@ int render_to_buffer(const char* input_swf, const char* class_name, unsigned cha
   rbuf.attach(buf, width, height, width * 4);
   pixfmt pixf(rbuf);
   renderer_base ren_base(pixf);
-//  ren_base.clear(agg::rgba(1.0, 1.0, 1.0));
+  ren_base.clear(agg::rgba(1.0, 1.0, 1.0));
   renderer_scanline ren(ren_base);
 
   if (const Sprite* sprite = swf->SpriteByClassName(class_name)) {
