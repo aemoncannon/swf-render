@@ -427,7 +427,7 @@ int render_to_buffer(const char* input_swf, const char* class_name, unsigned cha
   rbuf.attach(buf, width, height, width * 4);
   pixfmt pixf(rbuf);
   renderer_base ren_base(pixf);
-//  ren_base.clear(agg::rgba(1.0, 1.0, 1.0));
+  ren_base.clear(agg::rgba(1.0, 1.0, 1.0));
   renderer_scanline ren(ren_base);
   const int pad = 50;
 
