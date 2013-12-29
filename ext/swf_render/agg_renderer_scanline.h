@@ -603,8 +603,8 @@ namespace agg
                                             }
                                             else
                                             {
-                                              *colors = c;
-                                              //colors->add(c, *covers);
+                                              //*colors = c;
+                                              colors->add(c, *covers);
                                             }
                                             ++colors;
                                             ++covers;

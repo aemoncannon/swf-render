@@ -37,7 +37,9 @@ namespace agg
       int right_fill;
       int line;
       bool new_styles;
-      bool operator<(const path_style& other) const { return line < other.line; }
+      bool operator<(const path_style& other) const {
+return left_fill < other.left_fill;
+      }
     };
 
 
@@ -244,23 +246,6 @@ namespace agg
             return m_affine.scale();
         }
 
-        void scale(double w, double h)
-        {
-            m_affine.reset();
-            double x1, y1, x2, y2;
-            bounding_rect(m_path, *this, 0, m_styles.size(), 
-                          &x1, &y1, &x2, &y2);
-            if(x1 < x2 && y1 < y2)
-            {
-                trans_viewport vp;
-                vp.preserve_aspect_ratio(0.5, 0.5, aspect_ratio_meet);
-                vp.world_viewport(x1, y1, x2, y2);
-                vp.device_viewport(0, 0, w, h);
-                m_affine = vp.to_affine();
-            }
-            m_curve.approximation_scale(m_affine.scale());
-        }
-
         void approximation_scale(double s)
         {
             m_curve.approximation_scale(m_affine.scale() * s);
@@ -384,34 +369,98 @@ int render_sprite(const ParsedSWF& swf,
   return 0;
 }
 
+void get_bounds(const ParsedSWF& swf,
+                const Shape& shape,
+                const Matrix& transform,
+                double* x_min_out,
+                double* x_max_out,
+                double* y_min_out,
+                double* y_max_out) {
+  const Rect& r = shape.shape_bounds;
+  double x_min = r.x_min;
+  double x_max = r.x_max;
+  double y_min = r.y_min;
+  double y_max = r.y_max;
+  if (*x_min_out == 0 && *x_max_out == 0 &&
+      *y_min_out == 0 && *y_max_out == 0) {
+    *x_min_out = x_min;
+    *x_max_out = x_max;
+    *y_min_out = y_min;
+    *y_max_out = y_max;
+  } else {
+    transform.transform(&x_min, &y_min);
+    transform.transform(&x_max, &y_max);
+    *x_min_out = std::min(x_min, *x_min_out);
+    *x_max_out = std::max(x_max, *x_max_out);
+    *y_min_out = std::min(y_min, *y_min_out);
+    *y_max_out = std::max(y_max, *y_max_out);
+  }
+}
+
+void get_bounds(const ParsedSWF& swf,
+                const Sprite& sprite,
+                const Matrix& transform,
+                double* x_min_out,
+                double* x_max_out,
+                double* y_min_out,
+                double* y_max_out) {
+  for (auto it = sprite.placements.begin(); it != sprite.placements.end(); ++it) {
+    const Placement& placement = *it;
+    Matrix m(transform);
+    m.premultiply(placement.matrix);
+    if (const Sprite* sprite = swf.SpriteByCharacterId(placement.character_id)) {
+      get_bounds(swf, *sprite, m, x_min_out, x_max_out, y_min_out, y_max_out);
+    }
+    if (const Shape* shape = swf.ShapeByCharacterId(placement.character_id)) {
+      get_bounds(swf, *shape, m, x_min_out, x_max_out, y_min_out, y_max_out);
+    }
+  }
+}
+
 int render_to_buffer(const char* input_swf, const char* class_name, unsigned char* buf, int width, int height) {
   TinySWFParser parser;
   ParsedSWF* swf = parser.parse(input_swf);
 //  swf->Dump();
   assert(swf);
 
-  const Shape* shape = &swf->shapes[0];
-  const int x1 = shape->shape_bounds.x_min - 10;
-  const int x2 = shape->shape_bounds.x_max + 10;
-  const int y1 = shape->shape_bounds.y_min - 50;
-  const int y2 = shape->shape_bounds.y_max + 50;
-  agg::trans_viewport vp;
-  vp.preserve_aspect_ratio(0.5, 0.5, agg::aspect_ratio_meet);
-  vp.world_viewport(x1, y1, x2, y2);
-  vp.device_viewport(0, 0, width, height);
-  const Matrix view_transform = vp.to_affine();
-
   agg::rendering_buffer rbuf;
   rbuf.attach(buf, width, height, width * 4);
   pixfmt pixf(rbuf);
   renderer_base ren_base(pixf);
-  ren_base.clear(agg::rgba(1.0, 1.0, 1.0));
+//  ren_base.clear(agg::rgba(1.0, 1.0, 1.0));
   renderer_scanline ren(ren_base);
+  const int pad = 50;
 
   if (const Sprite* sprite = swf->SpriteByClassName(class_name)) {
+
+    double x1 = 0;
+    double x2 = 0;
+    double y1 = 0;
+    double y2 = 0;
+    Matrix identity;
+    get_bounds(*swf, *sprite, identity, &x1, &x2, &y1, &y2);
+    agg::trans_viewport vp;
+    vp.preserve_aspect_ratio(0.5, 0.5, agg::aspect_ratio_meet);
+    vp.world_viewport(x1 - pad, y1 - pad, x2 + pad, y2 + pad);
+    vp.device_viewport(0, 0, width, height);
+    const Matrix view_transform = vp.to_affine();
+
     render_sprite(*swf, *sprite, view_transform, width, height, ren_base, ren);
   } else {
     assert(swf->shapes.size());
+
+    double x1 = 0;
+    double x2 = 0;
+    double y1 = 0;
+    double y2 = 0;
+    Matrix identity;
+    get_bounds(*swf, swf->shapes[0], identity, &x1, &x2, &y1, &y2);
+    agg::trans_viewport vp;
+    vp.preserve_aspect_ratio(0.5, 0.5, agg::aspect_ratio_meet);
+    vp.world_viewport(x1 - pad, y1 - pad, x2 + pad, y2 + pad);
+    vp.device_viewport(0, 0, width, height);
+    const Matrix view_transform = vp.to_affine();
+
     for (auto it = swf->shapes.begin(); it != swf->shapes.end(); ++it) {
       printf("rendering shape");
       render_shape(*swf, *it, view_transform, width, height, ren_base, ren);
@@ -421,9 +470,8 @@ int render_to_buffer(const char* input_swf, const char* class_name, unsigned cha
   return 0;
 }
 
-int render_to_png_file(const char* input_swf, const char* class_name, const char* output_png) {
-  int width = 1200;
-  int height = 800;
+int render_to_png_file(const char* input_swf, const char* class_name,
+                       int width, int height, const char* output_png) {
   unsigned char* buf = new unsigned char[width * height * 4];
   render_to_buffer(input_swf, class_name, buf, width, height);
   unsigned error = lodepng_encode32_file(output_png, buf, width, height);
@@ -457,6 +505,6 @@ int main(int argc, char* argv[]) {
     fprintf(stderr, "usage: %s file.swf\n", argv[0]);
     return TRUE;
   }
-  return render_to_png_file(argv[1], argv[2], "out.png");
+  return render_to_png_file(argv[1], argv[2], atoi(argv[3]), atoi(argv[4]), argv[5]);
 }
 
