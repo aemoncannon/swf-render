@@ -590,8 +590,12 @@ namespace agg
                                 {
                                     // Just solid fill
                                     //-----------------------
+                                    int last_x = 0;
                                     for(;;)
                                     {
+                                      //                                        bool abutts = span_aa->x == (last_x + len - 1);
+                                        //                                        printf("%d, %d\n", span_aa->x, (last_x + len - 1));
+                                        last_x = span_aa->x;
                                         len    = span_aa->len;
                                         colors = mix_buffer + span_aa->x - min_x;
                                         covers = span_aa->covers;
@@ -603,8 +607,17 @@ namespace agg
                                             }
                                             else
                                             {
-                                              *colors = color_type(255, 255, 255, 100);
-                                              //colors->add(c, *covers);
+
+                                              if (colors->r == 0 && colors->g == 0 && colors->b == 0 && colors->a == 0) {
+                                                //printf("%d\n", *covers);
+                                                *colors = color_type(c.r, c.g, c.b, *covers);
+                                                //colors->add(color_type(c.r, c.g, c.b, *covers), 255);
+                                              } else {
+                                                *colors = colors->gradient(c, (float)*covers/255.0);
+                                                colors->opacity(1.0);
+                                                //colors->add(c, *covers);
+                                              }
+
                                             }
                                             ++colors;
                                             ++covers;
@@ -793,8 +806,12 @@ namespace agg
                                             }
                                             if(cover)
                                             {
+                                              if (colors->a == 0) {
+                                                *colors = color_type(c.r, c.g, c.b, cover);
+                                              } else {
                                                 colors->add(c, cover);
                                                 *dst_covers += cover;
+                                              }
                                             }
                                             ++colors;
                                             ++src_covers;
