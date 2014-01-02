@@ -3,15 +3,18 @@
 #include "tiny_TagDefine.h"
 #include "tiny_Util.h"
 
-agg::rgba8 make_rgba(unsigned v) {
-  return agg::rgba8((v >> 16) & 0xFF, (v >> 8) & 0xFF, v & 0xFF, v >> 24);
+Color make_rgba(unsigned v) {
+  return Color(v & 0xFF,
+               (v >> 8) & 0xFF,
+               (v >> 16) & 0xFF,
+               v >> 24);
 }
 
 void Rect::Dump() const {
   printf("(rect xmin=%d xmax=%d ymin=%d ymax=%d)", x_min, x_max, y_min, y_max);
 }
 
-agg::rgba8 FillStyle::gradient_color(double grad_x, double grad_y) const {
+Color FillStyle::gradient_color(double grad_x, double grad_y) const {
   static const double x1 = -16384;
   static const double y1 = -16384;
   static const double x2 = 16384;
@@ -36,9 +39,9 @@ agg::rgba8 FillStyle::gradient_color(double grad_x, double grad_y) const {
   }
   const int len = gradient_entries.size();
   assert(len > 0);
-  agg::rgba8 left_color = gradient_entries[0].second;
+  Color left_color = gradient_entries[0].second;
   double left_pos = 0.0;
-  agg::rgba8 right_color = gradient_entries[len - 1].second;
+  Color right_color = gradient_entries[len - 1].second;
   double right_pos = 1.0;
   for (int i = 0; i < gradient_entries.size(); i++) {
     if (pos < gradient_entries[i].first) {
@@ -50,7 +53,7 @@ agg::rgba8 FillStyle::gradient_color(double grad_x, double grad_y) const {
     left_pos = gradient_entries[i].first;
   }
   const double r = (pos - left_pos) / (right_pos - left_pos);
-  agg::rgba8 color = left_color.gradient(right_color, r);
+  Color color = left_color.gradient(right_color, r);
   //color.premultiply();
   return color;
 }
@@ -429,19 +432,19 @@ int TinySWFParser::getGRADIENT(Tag *tag, FillStyle* style)
   if (NumGradients) {
         for (i = 0; i < NumGradients; i++) {
             // GRADRECORD
-            unsigned int Ratio, Color;
+            unsigned int Ratio, EntryColor;
             Ratio = getUI8();
             // gradientRecord["Ratio"] = Ratio;
             if ((tag->TagCode == TAG_DEFINESHAPE) || (tag->TagCode == TAG_DEFINESHAPE2)) {
-                Color = (0xFF << 24) | getRGB(); // for DefineShape and DefineShape2
+                EntryColor = (0xFF << 24) | getRGB(); // for DefineShape and DefineShape2
                 // gradientRecord["Color"] = Color2String(Color, 0);
             } else {
-                Color = getRGBA(); // for DefineShape3 or later?
+                EntryColor = getRGBA(); // for DefineShape3 or later?
                 // gradientRecord["Color"] = Color2String(Color, 1);
             }
             const float r = (float)Ratio / 255.0;
             style->gradient_entries.push_back(
-                std::pair<float, agg::rgba8>(r, make_rgba(Color)));
+                std::pair<float, Color>(r, make_rgba(EntryColor)));
         }
     }
 	return TRUE;

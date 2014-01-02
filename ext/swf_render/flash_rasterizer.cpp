@@ -77,17 +77,17 @@ return left_fill < other.left_fill;
 
         // Just returns a color
         //---------------------------------------------
-        rgba8 color(unsigned fill_style_index) const
+        Color color(unsigned fill_style_index) const
         {
           const FillStyle& fill = (*m_fill_styles)[fill_style_index];
           if (fill.type == FillStyle::kSolid) {
             return make_rgba(fill.rgba);
 
           } else if (fill.type == FillStyle::kGradientLinear) {
-            return rgba8(0, 0, 0, 255);
+            return Color(0, 0, 0, 255);
 
           } else {
-            return rgba8(255, 0, 0, 255);
+            return Color(255, 0, 0, 255);
           }
         }
 
@@ -95,7 +95,7 @@ return left_fill < other.left_fill;
         // can be a span generator, so that, parameter "style"
         // isn't used here.
         //---------------------------------------------
-        void generate_span(rgba8* span, int x, int y, unsigned len, unsigned style) {
+        void generate_span(Color* span, int x, int y, unsigned len, unsigned style) {
           const FillStyle& fill_style = (*m_fill_styles)[style];
           // The initial gradient square is centered at (0,0),
           // and extends from (-16384,-16384) to (16384,16384).
@@ -268,7 +268,7 @@ return left_fill < other.left_fill;
 
 }  // namespace agg
 
-  typedef agg::pixfmt_bgra32 pixfmt;
+  typedef agg::pixfmt_rgba32_plain pixfmt;
   typedef agg::renderer_base<pixfmt> renderer_base;
   typedef agg::renderer_scanline_aa_solid<renderer_base> renderer_scanline;
   typedef agg::scanline_u8 scanline;
@@ -290,7 +290,7 @@ int render_shape(const ParsedSWF& swf,
     Matrix m_scale;
     agg::conv_transform<agg::compound_shape> shape(m_shape, m_scale);
     agg::conv_stroke<agg::conv_transform<agg::compound_shape> > stroke(shape);
-    agg::span_allocator<agg::rgba8> alloc;
+    agg::span_allocator<Color> alloc;
 //    m_shape.approximation_scale(m_scale.scale());
 //    printf("Filling shapes.\n");
     // Fill shape
@@ -427,7 +427,7 @@ int render_to_buffer(const char* input_swf, const char* class_name, unsigned cha
   rbuf.attach(buf, width, height, width * 4);
   pixfmt pixf(rbuf);
   renderer_base ren_base(pixf);
-  ren_base.clear(agg::rgba(1.0, 1.0, 1.0));
+  ren_base.clear(Color());
   renderer_scanline ren(ren_base);
   const int pad = 50;
 

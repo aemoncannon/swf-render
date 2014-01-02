@@ -378,7 +378,7 @@ namespace agg
             calc_type cr, cg, cb, ca;
             if(cover == cover_mask)
             {
-                if(c.a == base_mask) 
+                if(c.a == base_mask)
                 {
                     *this = c;
                 }

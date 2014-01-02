@@ -11,9 +11,10 @@
 #ifndef _TINYSWFPARSER_H
 #define _TINYSWFPARSER_H
 
+typedef agg::rgba8 Color;
 typedef agg::trans_affine Matrix;
 
-agg::rgba8 make_rgba(unsigned v);
+Color make_rgba(unsigned v);
 
 class Rect {
  public:
@@ -41,9 +42,9 @@ class FillStyle {
   unsigned int rgba;
   Matrix matrix;
   // Expects coordinates in the untransformed gradient coordinate space.
-  agg::rgba8 gradient_color(double grad_x, double grad_y) const;
+  Color gradient_color(double grad_x, double grad_y) const;
   // Pairs of ratio (0.0-1.0), rgba
-  std::vector<std::pair<float, agg::rgba8> > gradient_entries;
+  std::vector<std::pair<float, Color> > gradient_entries;
   void Dump() const;
 };
 

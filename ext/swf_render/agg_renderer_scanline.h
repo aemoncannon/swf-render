@@ -585,13 +585,13 @@ namespace agg
                                 typename ScanlineAA::cover_type* covers;
                                 span_aa   = sl_aa.begin();
                                 num_spans = sl_aa.num_spans();
+                                color_type c = sh.color(style);
                                 if(solid)
                                 {
                                     // Just solid fill
                                     //-----------------------
                                     for(;;)
                                     {
-                                        color_type c = sh.color(style);
                                         len    = span_aa->len;
                                         colors = mix_buffer + span_aa->x - min_x;
                                         covers = span_aa->covers;
@@ -603,8 +603,8 @@ namespace agg
                                             }
                                             else
                                             {
-                                              //*colors = c;
-                                              colors->add(c, *covers);
+                                              *colors = color_type(255, 255, 255, 100);
+                                              //colors->add(c, *covers);
                                             }
                                             ++colors;
                                             ++covers;
@@ -657,8 +657,8 @@ namespace agg
                         num_spans = sl_bin.num_spans();
                         for(;;)
                         {
-                            ren.blend_color_hspan(span_bin->x, 
-                                                  sl_bin.y(), 
+                            ren.blend_color_hspan(span_bin->x,
+                                                  sl_bin.y(),
                                                   span_bin->len,
                                                   mix_buffer + span_bin->x - min_x,
                                                   0,
