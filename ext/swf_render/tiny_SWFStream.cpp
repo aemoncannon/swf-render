@@ -197,27 +197,30 @@ unsigned int SWFStream::getUI8()
     return value;
 }
 
+signed int SWFStream::getSI8()
+{
+	signed int value = 0;
+	value = getUI8();
+	if (value & (1 << 7))
+		value |=  (-1 << 8); // sign extension
+  return value;
+}
 
 signed int SWFStream::getSI16()
 {
 	signed int value = 0;
-	
 	value = getUI16();
-	
 	if (value & (1 << 15))
 		value |=  (-1 << 16); // sign extension
-	
-    return value;
+  return value;
 }
 
 signed int SWFStream::getSI32()
 {
 	signed int value = 0;
-	
 	value = *((signed int *)(_streamBuffer + _stream_pos));
-    _stream_pos += 4;
-	
-    return value;
+  _stream_pos += 4;
+  return value;
 }
 
 //// Fixed Number Operation
@@ -226,22 +229,18 @@ signed int SWFStream::getSI32()
 float SWFStream::getFIXED8() // 16-bit 8.8 fixed-point number => A(7, 8)
 {
 	float value = 0;
-    /*
-	value = getUI8() / 0x100;
-	value += getUI8();
-    */
-    value = getSI16() / (1 << 8);
+	value = getSI8() / (float)0x100;
+	value += getSI8();
+//    value = getSI16() / (1 << 8);
 	return value;
 }
 
 float SWFStream::getFIXED() // 32-bit 16.16 fixed-point number => A (15, 16)
 {
 	float value = 0;
-    /*
-	value = getUI16() / 0x10000;
-	value += getUI16();
-    */
-    value = getSI32() / (1 << 16);
+	value = getSI16() / (float)0x10000;
+	value += getSI16();
+//  value = getSI32() / (float)(1 << 16);
 	return value;
 }
 

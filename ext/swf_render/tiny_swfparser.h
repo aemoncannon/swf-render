@@ -48,6 +48,7 @@ class FillStyle {
   Color gradient_color(double grad_x, double grad_y) const;
   // Pairs of ratio (0.0-1.0), rgba
   std::vector<std::pair<float, Color> > gradient_entries;
+  float focal_point;
   void Dump() const;
 };
 

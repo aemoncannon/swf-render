@@ -39,7 +39,8 @@ public:
 	unsigned int	getUI32();
 	unsigned int	getUI16();
 	unsigned int	getUI8();
-	
+
+        signed int getSI8();
 	signed   int	getSI16();
     signed   int	getSI32();
 	

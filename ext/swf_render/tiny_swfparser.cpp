@@ -15,26 +15,73 @@ void Rect::Dump() const {
 }
 
 Color FillStyle::gradient_color(double grad_x, double grad_y) const {
-  static const double x1 = -16384;
-  static const double y1 = -16384;
-  static const double x2 = 16384;
-  static const double y2 = 16384;
-  static const double x3 = -16384;
-  static const double y3 = 16384;
-  static const double x4 = 16384;
-  static const double y4 = -16384;
-  static const double kGradMin = x1;
-  static const double kGradWidth = x2 - x1;
-  static const double kGradRadius = x2;
+  static const double X1 = -16384;
+  static const double Y1 = -16384;
+  static const double X2 = 16384;
+  static const double Y2 = 16384;
+  static const double X3 = -16384;
+  static const double Y3 = 16384;
+  static const double X4 = 16384;
+  static const double Y4 = -16384;
+  static const double kGradMin = X1;
+  static const double kGradWidth = X2 - X1;
+  static const double kGradRadius = X2;
   double pos = 0.0;
   switch (type) {
   case FillStyle::kGradientLinear:
     pos = std::max(0.0, std::min(1.0, (grad_x - kGradMin) / kGradWidth));
     break;
   case FillStyle::kGradientRadial:
-  case FillStyle::kGradientFocal:
     pos = std::max(0.0, std::min(1.0, sqrt((grad_x * grad_x) + (grad_y * grad_y)) / kGradRadius));
     break;
+  case FillStyle::kGradientFocal: {
+    const double r = X2;
+    const double x1 = r * focal_point;
+    const double y1 = 0;
+    const double dy = grad_y - y1;
+    const double dx = grad_x - x1;
+    const double fx = x1;
+    const double fy = y1;
+    const float a = dx*dx + dy*dy;
+    const float b = 2 * (fx*dx + fy*dy);
+    const float c = (fx*fx + fy*fy) - r * r;
+    float discriminant = b * b - 4 * a * c;
+    if (discriminant < 0) {/*no intersection*/}
+    else {
+      // ray didn't totally miss sphere,
+      // so there is a solution to
+      // the equation.
+      discriminant = sqrt(discriminant);
+      // either solution may be on or off the ray so need to test both
+      // t1 is always the smaller value, because BOTH discriminant and
+      // a are nonnegative.
+      float t1 = (-b - discriminant) / (2 * a);
+      float t2 = (-b + discriminant) / (2 * a);
+      // 3x HIT cases:
+      //          -o->             --|-->  |            |  --|->
+      // Impale(t1 hit,t2 hit), Poke(t1 hit,t2>1), ExitWound(t1<0, t2 hit), 
+      // 3x MISS cases:
+      //       ->  o                     o ->              | -> |
+      // FallShort (t1>1,t2>1), Past (t1<0,t2<0), CompletelyInside(t1<0, t2>1)
+      if(t1 >= 0) {
+        // t1 is the intersection, and it's closer than t2
+        // (since t1 uses -b - discriminant)
+        // Impale, Poke
+        pos = 1.0 / t1;
+//        printf("impale, poke\n");
+      }
+      // here t1 didn't intersect so we are either started
+      // inside the sphere or completely past it
+      if(t2 >= 0) {
+        // ExitWound
+        pos = 1.0 / t2;
+//        printf("exit\n");
+      }
+      // no intn: FallShort, Past, CompletelyInside
+//      printf("no intn\n");
+    }
+    break;
+  }
   default: break;
   }
   const int len = gradient_entries.size();
@@ -426,9 +473,6 @@ int TinySWFParser::getGRADIENT(Tag *tag, FillStyle* style)
 	SpreadMode = getUBits(2);           // 0 = Pad mode, 1 = Reflect mode, 2 = Repeat mode, 3 = Reserved
 	InterpolationMode = getUBits(2);    // 0 = Nomral RGB mode, 1 = Linear RGB mode, 2 and 3 = Reserved
 	NumGradients = getUBits(4); // 1 to 15
-  // gradientObject["SpreadMode"] = SpreadMode;
-  // gradientObject["InterpolationMode"] = InterpolationMode;
-  // gradientObject["NumGradients"] = NumGradients;
   if (NumGradients) {
         for (i = 0; i < NumGradients; i++) {
             // GRADRECORD
@@ -452,10 +496,9 @@ int TinySWFParser::getGRADIENT(Tag *tag, FillStyle* style)
 
 int TinySWFParser::getFOCALGRADIENT(Tag *tag, FillStyle* style)
 {
-  printf("Warning: unhandled focal gradient.\n");
   getGRADIENT(tag, style);
-  float FocalPoint;
-  FocalPoint = getFIXED8();    // Focal point location
+  style->focal_point = getFIXED8();    // Focal point location
+  printf("FOCAL POINT: %f\n", style->focal_point);
 	return TRUE;
 }
 
