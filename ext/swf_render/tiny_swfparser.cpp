@@ -358,8 +358,7 @@ void TinySWFParser::HandlePlaceObject23(Tag* tag, Sprite* sprite, int current_fr
           getMATRIX(&placement.matrix); // Transform matrix data
         }
         if (PlaceFlagHasColorTransform) {
-          assert(false);
-          //getCXFORMWITHALPHA(tagObject["ColorTransform"]);
+          getCXFORMWITHALPHA();
         }
         if (PlaceFlagHasRatio) {
           Ratio = getUI16();
@@ -368,7 +367,7 @@ void TinySWFParser::HandlePlaceObject23(Tag* tag, Sprite* sprite, int current_fr
           const char* name = getSTRING();
         }
         if (PlaceFlagHasClipDepth) {
-          assert(false);
+          printf("Warning: unhandled clipping mask.\n");
           ClipDepth = getUI16();
         }
     if (tag->TagCode == TAG_PLACEOBJECT3) {   // PlaceObject3 only
@@ -376,7 +375,7 @@ void TinySWFParser::HandlePlaceObject23(Tag* tag, Sprite* sprite, int current_fr
           getFILTERLIST(&placement);
         }
         if (PlaceFlagHasBlendMode) {
-          assert(false);
+          printf("Warning: unhandled blend mode.\n");
             unsigned int BlendMode;
             BlendMode = getUI8();
         }
@@ -452,10 +451,10 @@ int TinySWFParser::getGRADIENT(Tag *tag, FillStyle* style)
 
 int TinySWFParser::getFOCALGRADIENT(Tag *tag, FillStyle* style)
 {
-    getGRADIENT(tag, style);
-    float FocalPoint;
-    FocalPoint = getFIXED8();    // Focal point location
-    //focalObject["FocalPoint"] = FocalPoint;
+  printf("Warning: unhandled focal gradient.\n");
+  getGRADIENT(tag, style);
+  float FocalPoint;
+  FocalPoint = getFIXED8();    // Focal point location
 	return TRUE;
 }
 
@@ -559,60 +558,6 @@ int TinySWFParser::getCXFORM(VObject &cxObject)
 	
 	return TRUE;
 }
-
-int TinySWFParser::getCXFORMWITHALPHA(VObject &cxObject)
-{
-	unsigned int HasAddTerms, HasMultTerms, Nbits;
-	signed int RedMultTerm, GreenMultTerm, BlueMultTerm, AlphaMultTerm, RedAddTerm, GreenAddTerm, BlueAddTerm, AlphaAddTerm;
-	
-	setByteAlignment(); // CXFORM Record must be byte aligned.
-
-	DEBUGMSG("{\n");
-	cxObject.setTypeInfo("CXFORMWITHALPHA");
-    
-	HasAddTerms		= getUBits(1);
-	HasMultTerms	= getUBits(1);
-	Nbits = getUBits(4);
-
-    cxObject["HasAddTerms"]     = HasAddTerms;
-    cxObject["HasMultTerms"]    = HasMultTerms;
-    cxObject["Nbits"]           = Nbits;
-    
-	DEBUGMSG("HasAddTerms : %d,\nHasMultTerms : %d,\nNbits : %d", HasAddTerms, HasMultTerms, Nbits);
-	
-	if (HasMultTerms) {
-		RedMultTerm		= getSBits(Nbits);
-        GreenMultTerm	= getSBits(Nbits);
-		BlueMultTerm	= getSBits(Nbits);
-		AlphaMultTerm	= getSBits(Nbits);
-        
-        cxObject["RedMultTerm"]     = FIXED8TOFLOAT(RedMultTerm);
-        cxObject["GreenMultTerm"]   = FIXED8TOFLOAT(GreenMultTerm);
-        cxObject["BlueMultTerm"]    = FIXED8TOFLOAT(BlueMultTerm);
-        cxObject["AlphaMultTerm"]   = FIXED8TOFLOAT(AlphaMultTerm);
-        
-        DEBUGMSG(",\nRedMultTerm : %d,\nGreenMultTerm : %d,\nBlueMultTerm : %d,\nAlphaMultTerm : %d", RedMultTerm, GreenMultTerm, BlueMultTerm, AlphaMultTerm);
-	}
-	
-	if (HasAddTerms) {
-		RedAddTerm		= getSBits(Nbits);
-        GreenAddTerm	= getSBits(Nbits);
-		BlueAddTerm		= getSBits(Nbits);
-		AlphaAddTerm	= getSBits(Nbits);
-
-        cxObject["RedAddTerm"] = RedAddTerm;
-        cxObject["GreenAddTerm"] = GreenAddTerm;
-        cxObject["BlueAddTerm"] = BlueAddTerm;
-        cxObject["AlphaAddTerm"] = AlphaAddTerm;
-        
-        DEBUGMSG(",\nRedAddTerm : %d,\nGreenAddTerm : %d,\nBlueAddTerm : %d,\nAlphaAddTerm : %d", RedAddTerm, GreenAddTerm, BlueAddTerm, AlphaAddTerm);
-	}
-	
-    DEBUGMSG("\n}");
-	
-	return TRUE;
-}
-
 
 ///////////////////////////////////////
 //// Fill Style & Line Style
@@ -881,9 +826,21 @@ int TinySWFParser::getGLOWFILTER(Filter* filter)
   return TRUE;
 }
 
+int TinySWFParser::getBLURFILTER(Filter* filter)
+{
+  printf("Warning: unhandled blur.\n");
+    float BlurX, BlurY;
+    BlurX = getFIXED();
+    BlurY = getFIXED();
+    unsigned int Passes;
+    Passes = getUBits(5);
+    ASSERT(getUBits(3));    // Reserved, must be 0
+    return TRUE;
+}
+
 int TinySWFParser::getCOLORMATRIXFILTER(Filter* filter)
 {
-  // TODO(aemon): Actually apply these changes.
+  printf("Warning: unhandled color matrix filter.\n");
   float Matrix[20];
   for (int i = 0; i < 20; i++) {
     Matrix[i] = getFLOAT();
@@ -907,9 +864,8 @@ int TinySWFParser::getFILTERLIST(Placement* placement)    // SWF8 or later
                   //getDROPSHADOWFILTER(filter["DropShadowFilter"]);
                     break;
                 case Filter::kFilterBlur:
-                  assert(false);
-                  //getBLURFILTER(filter["BlurFilter"]);
-                    break;
+                  getBLURFILTER(&filter);
+                  break;
                 case Filter::kFilterGlow:
                     getGLOWFILTER(&filter);
                     break;
@@ -941,4 +897,32 @@ int TinySWFParser::getFILTERLIST(Placement* placement)    // SWF8 or later
         } // for
     }
     return TRUE;
+}
+
+int TinySWFParser::getCXFORMWITHALPHA()
+{
+  printf("Warning: unhandled color transform with alpha.\n");
+	unsigned int HasAddTerms, HasMultTerms, Nbits;
+	signed int RedMultTerm, GreenMultTerm, BlueMultTerm, AlphaMultTerm, RedAddTerm, GreenAddTerm, BlueAddTerm, AlphaAddTerm;
+	setByteAlignment(); // CXFORM Record must be byte aligned.
+	HasAddTerms		= getUBits(1);
+	HasMultTerms	= getUBits(1);
+	Nbits = getUBits(4);
+	if (HasMultTerms) {
+		RedMultTerm		= getSBits(Nbits);
+    GreenMultTerm	= getSBits(Nbits);
+		BlueMultTerm	= getSBits(Nbits);
+		AlphaMultTerm	= getSBits(Nbits);
+    FIXED8TOFLOAT(RedMultTerm);
+    FIXED8TOFLOAT(GreenMultTerm);
+    FIXED8TOFLOAT(BlueMultTerm);
+    FIXED8TOFLOAT(AlphaMultTerm);
+	}
+	if (HasAddTerms) {
+		RedAddTerm		= getSBits(Nbits);
+    GreenAddTerm	= getSBits(Nbits);
+		BlueAddTerm		= getSBits(Nbits);
+		AlphaAddTerm	= getSBits(Nbits);
+	}
+	return TRUE;
 }

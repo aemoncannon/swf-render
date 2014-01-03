@@ -228,7 +228,7 @@ public:
 	
 	//// Transformation
 	int             getCXFORM(VObject &cxObject);
-	int             getCXFORMWITHALPHA(VObject &cxObject);
+	int             getCXFORMWITHALPHA();
 	
 	//// Fill & Line Styles
     int             getFILLSTYLE(Tag *tag, FillStyle* styles);
@@ -281,7 +281,7 @@ private:
     //// Internally used Filter getters
     int             getCOLORMATRIXFILTER(Filter* filter);
     int             getCONVOLUTIONFILTER(VObject &filterObject);
-    int             getBLURFILTER(VObject &filterObject);
+    int             getBLURFILTER(Filter* filter);
     int             getDROPSHADOWFILTER(VObject &filterObject);
     int             getGLOWFILTER(Filter* filter);
     int             getBEVELFILTER(VObject &filterObject);
