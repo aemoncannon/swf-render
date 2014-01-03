@@ -881,6 +881,16 @@ int TinySWFParser::getGLOWFILTER(Filter* filter)
   return TRUE;
 }
 
+int TinySWFParser::getCOLORMATRIXFILTER(Filter* filter)
+{
+  // TODO(aemon): Actually apply these changes.
+  float Matrix[20];
+  for (int i = 0; i < 20; i++) {
+    Matrix[i] = getFLOAT();
+  }
+  return TRUE;
+}
+
 ///////////////////////////////////////////////////////////
 // filter operations above is used by getFILTERLIST() only.
 ///////////////////////////////////////////////////////////
@@ -916,9 +926,8 @@ int TinySWFParser::getFILTERLIST(Placement* placement)    // SWF8 or later
                   //getCONVOLUTIONFILTER(filter["ConvolutionFilter"]);
                     break;
                 case Filter::kFilterColorMatrix:
-                  assert(false);
-                  //getCOLORMATRIXFILTER(filter["ColorMatrixFilter"]);
-                    break;
+                  getCOLORMATRIXFILTER(&filter);
+                  break;
                 case Filter::kFilterGradientBevel:
                   assert(false);
                   //getGRADIENTBEVELFILTER(filter["GradientBevelFilter"]);

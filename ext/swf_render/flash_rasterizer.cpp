@@ -389,6 +389,8 @@ void get_bounds(const ParsedSWF& swf,
     x_max = std::max(x_max, (double)shape.edge_bounds.x_max);
     y_max = std::max(y_max, (double)shape.edge_bounds.y_max);
   }
+  transform.transform(&x_min, &y_min);
+  transform.transform(&x_max, &y_max);
   if (*x_min_out == 0 && *x_max_out == 0 &&
       *y_min_out == 0 && *y_max_out == 0) {
     *x_min_out = x_min;
@@ -396,8 +398,6 @@ void get_bounds(const ParsedSWF& swf,
     *y_min_out = y_min;
     *y_max_out = y_max;
   } else {
-    transform.transform(&x_min, &y_min);
-    transform.transform(&x_max, &y_max);
     *x_min_out = std::min(x_min, *x_min_out);
     *x_max_out = std::max(x_max, *x_max_out);
     *y_min_out = std::min(y_min, *y_min_out);
@@ -419,7 +419,7 @@ void get_bounds(const ParsedSWF& swf,
     if (const Sprite* sprite = swf.SpriteByCharacterId(placement.character_id)) {
       get_bounds(swf, *sprite, m, x_min_out, x_max_out, y_min_out, y_max_out);
     }
-    if (const Shape* shape = swf.ShapeByCharacterId(placement.character_id)) {
+    else if (const Shape* shape = swf.ShapeByCharacterId(placement.character_id)) {
       get_bounds(swf, *shape, m, x_min_out, x_max_out, y_min_out, y_max_out);
     }
   }

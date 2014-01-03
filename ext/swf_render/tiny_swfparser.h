@@ -279,7 +279,7 @@ public:
 private:
     
     //// Internally used Filter getters
-    int             getCOLORMATRIXFILTER(VObject &filterObject);
+    int             getCOLORMATRIXFILTER(Filter* filter);
     int             getCONVOLUTIONFILTER(VObject &filterObject);
     int             getBLURFILTER(VObject &filterObject);
     int             getDROPSHADOWFILTER(VObject &filterObject);
