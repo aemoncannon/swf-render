@@ -428,7 +428,7 @@ void get_bounds(const ParsedSWF& swf,
 int render_to_buffer(const char* input_swf, const char* class_name, unsigned char* buf, int width, int height) {
   TinySWFParser parser;
   ParsedSWF* swf = parser.parse(input_swf);
-//  swf->Dump();
+  //swf->Dump();
   assert(swf);
 
   agg::rendering_buffer rbuf;

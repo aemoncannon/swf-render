@@ -224,6 +224,7 @@ ParsedSWF* TinySWFParser::parseWithCallback(const char *filename, ProgressUpdate
 
         TagLength	= tag.TagLength;
         switch (TagCode) {
+        case TAG_DEFINESHAPE:
         case TAG_DEFINESHAPE2:
         case TAG_DEFINESHAPE3:
         case TAG_DEFINESHAPE4: {
