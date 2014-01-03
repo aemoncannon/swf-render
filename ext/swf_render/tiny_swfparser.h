@@ -19,6 +19,9 @@ Color make_rgba(unsigned v);
 class Rect {
  public:
   Rect() : x_min(0), y_min(0), x_max(0), y_max(0) {}
+  bool is_valid() const {
+    return x_min != 0 || y_min != 0 || x_max != 0 || y_max != 0;
+  }
   int x_min;
   int x_max;
   int y_min;

@@ -126,8 +126,8 @@ return left_fill < other.left_fill;
           if (m_record_index >= m_shape->records.size()) return false;
             m_path.remove_all();
             m_styles.clear();
-            int last_move_y = 0;
             int last_move_x = 0;
+            int last_move_y = 0;
             int last_fill0 = -1;
             int last_fill1 = -1;
             int last_line_style = -1;
@@ -320,7 +320,9 @@ int render_shape(const ParsedSWF& swf,
           break;
         case LineStyle::kJoinMiter:
           stroke.line_join(agg::miter_join);
-          stroke.miter_limit(style.miter_limit_factor);
+          if (style.miter_limit_factor > 0) {
+            stroke.miter_limit(style.miter_limit_factor);
+          }
           break;
         case LineStyle::kJoinRound:  // Fall through
         default:
@@ -381,6 +383,12 @@ void get_bounds(const ParsedSWF& swf,
   double x_max = r.x_max;
   double y_min = r.y_min;
   double y_max = r.y_max;
+  if (shape.edge_bounds.is_valid()) {
+    x_min = std::min(x_min, (double)shape.edge_bounds.x_min);
+    y_min = std::min(y_min, (double)shape.edge_bounds.y_min);
+    x_max = std::max(x_max, (double)shape.edge_bounds.x_max);
+    y_max = std::max(y_max, (double)shape.edge_bounds.y_max);
+  }
   if (*x_min_out == 0 && *x_max_out == 0 &&
       *y_min_out == 0 && *y_max_out == 0) {
     *x_min_out = x_min;

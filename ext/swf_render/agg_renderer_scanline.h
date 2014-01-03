@@ -479,7 +479,32 @@ namespace agg
 
 
 
-
+    template<typename color_type>
+    color_type overlay_color(color_type color,
+                             color_type c,
+                             unsigned cover) {
+      if(cover == cover_full) {
+        return c;
+      } else {
+        color_type k = color_type(c.r, c.g, c.b, ((float)cover)/255.0 * (float)c.a);
+        if (color.a == 0) {
+          return k;
+        } else {
+          // Credit for blending procedure goes to Sniggarfardumungus:
+          // http://stackoverflow.com/questions/12011081/alpha-blending-2-rgba-colors-in-c
+          unsigned alpha = k.a + 1;
+          unsigned inv_alpha = 256 - k.a;
+          unsigned cr = (alpha * k.r + inv_alpha * color.r) >> 8;
+          unsigned cg = (alpha * k.g + inv_alpha * color.g) >> 8;
+          unsigned cb = (alpha * k.b + inv_alpha * color.b) >> 8;
+          unsigned ca = k.a + color.a;
+          return color_type(cr > 255 ? 255 : cr,
+                            cg > 255 ? 255 : cg,
+                            cb > 255 ? 255 : cb,
+                            ca > 255 ? 255 : ca);
+        }
+      }
+    }
 
 
     //=============================================render_scanlines_compound
@@ -512,8 +537,8 @@ namespace agg
             unsigned style;
             bool     solid;
             while((num_styles = ras.sweep_styles()) > 0)
-
             {
+
                 typename ScanlineAA::const_iterator span_aa;
                 if(num_styles == 1)
                 {
@@ -521,6 +546,7 @@ namespace agg
                     //-------------------------
                     if(ras.sweep_scanline(sl_aa, 0))
                     {
+
                         style = ras.style(0);
                         if(sh.is_solid(style))
                         {
@@ -558,6 +584,7 @@ namespace agg
                 {
                     if(ras.sweep_scanline(sl_bin, -1))
                     {
+
                         // Clear the spans of the mix_buffer
                         //--------------------
                         typename ScanlineBin::const_iterator span_bin = sl_bin.begin();
@@ -586,41 +613,21 @@ namespace agg
                                 span_aa   = sl_aa.begin();
                                 num_spans = sl_aa.num_spans();
                                 color_type c = sh.color(style);
+
                                 if(solid)
                                 {
                                     // Just solid fill
                                     //-----------------------
-                                    int last_x = 0;
                                     for(;;)
                                     {
-                                      //                                        bool abutts = span_aa->x == (last_x + len - 1);
-                                        //                                        printf("%d, %d\n", span_aa->x, (last_x + len - 1));
-                                        last_x = span_aa->x;
                                         len    = span_aa->len;
                                         colors = mix_buffer + span_aa->x - min_x;
                                         covers = span_aa->covers;
                                         do
                                         {
-                                            if(*covers == cover_full)
-                                            {
-                                              *colors = c;
-                                            }
-                                            else
-                                            {
-
-                                              if (colors->r == 0 && colors->g == 0 && colors->b == 0 && colors->a == 0) {
-                                                //printf("%d\n", *covers);
-                                                *colors = color_type(c.r, c.g, c.b, *covers);
-                                                //colors->add(color_type(c.r, c.g, c.b, *covers), 255);
-                                              } else {
-                                                *colors = colors->gradient(c, (float)*covers/255.0);
-                                                colors->opacity(1.0);
-                                                //colors->add(c, *covers);
-                                              }
-
-                                            }
-                                            ++colors;
-                                            ++covers;
+                                          *colors = overlay_color(*colors, c, *covers);
+                                          ++colors;
+                                          ++covers;
                                         }
                                         while(--len);
                                         if(--num_spans == 0) break;
@@ -644,17 +651,10 @@ namespace agg
                                         covers = span_aa->covers;
                                         do
                                         {
-                                            if(*covers == cover_full)
-                                            {
-                                                *colors = *cspan;
-                                            }
-                                            else
-                                            {
-                                                colors->add(*cspan, *covers);
-                                            }
-                                            ++cspan;
-                                            ++colors;
-                                            ++covers;
+                                          *colors = overlay_color(*colors, *cspan, *covers);
+                                          ++cspan;
+                                          ++colors;
+                                          ++covers;
                                         }
                                         while(--len);
                                         if(--num_spans == 0) break;
