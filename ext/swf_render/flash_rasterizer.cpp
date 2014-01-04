@@ -382,7 +382,6 @@ int render_sprite(const ParsedSWF& swf,
       for (auto it = placement.filters.begin(); it != placement.filters.end(); ++it) {
         if (it->filter_type == Filter::kFilterColorMatrix) {
           color_m = &it->color_matrix;
-          color_m->Dump();
         }
       }
     }
