@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <time.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <map>
 #include "agg_rendering_buffer.h"
 #include "agg_trans_viewport.h"
@@ -27,6 +28,7 @@
 
 #include "tiny_common.h"
 #include "tiny_swfparser.h"
+#include "utils.h"
 
 namespace agg
 {
@@ -449,21 +451,20 @@ void get_bounds(const ParsedSWF& swf,
   }
 }
 
-int render_to_buffer(const char* input_swf, const char* class_name, unsigned char* buf, int width, int height) {
+int render_to_buffer(const RunConfig& c, unsigned char* buf) {
   TinySWFParser parser;
-  ParsedSWF* swf = parser.parse(input_swf);
+  ParsedSWF* swf = parser.parse(c.input_swf.c_str());
   //swf->Dump();
   assert(swf);
 
   agg::rendering_buffer rbuf;
-  rbuf.attach(buf, width, height, width * 4);
+  rbuf.attach(buf, c.width, c.height, c.width * 4);
   pixfmt pixf(rbuf);
   renderer_base ren_base(pixf);
 //  ren_base.clear(Color());
   renderer_scanline ren(ren_base);
-  const int pad = 50;
-
-  if (const Sprite* sprite = swf->SpriteByClassName(class_name)) {
+  const double pad = c.padding;
+  if (const Sprite* sprite = swf->SpriteByClassName(c.class_name.c_str())) {
 
     double x1 = 0;
     double x2 = 0;
@@ -473,11 +474,14 @@ int render_to_buffer(const char* input_swf, const char* class_name, unsigned cha
     get_bounds(*swf, *sprite, identity, &x1, &x2, &y1, &y2);
     agg::trans_viewport vp;
     vp.preserve_aspect_ratio(0.5, 0.5, agg::aspect_ratio_meet);
-    vp.world_viewport(x1 - pad, y1 - pad, x2 + pad, y2 + pad);
-    vp.device_viewport(0, 0, width, height);
+    vp.world_viewport(x1, y1, x2, y2);
+    vp.device_viewport(0, 0, c.width, c.height);
+    const double p = pad / vp.scale_x();  // Find world padding that will give the desired pixel padding.
+    vp.world_viewport(x1-p, y1-p, x2+p, y2+p);
+    vp.device_viewport(0, 0, c.width, c.height);
     const Matrix view_transform = vp.to_affine();
 
-    render_sprite(*swf, *sprite, view_transform, NULL, width, height, ren_base, ren);
+    render_sprite(*swf, *sprite, view_transform, NULL, c.width, c.height, ren_base, ren);
   } else {
     assert(swf->shapes.size());
 
@@ -490,22 +494,21 @@ int render_to_buffer(const char* input_swf, const char* class_name, unsigned cha
     agg::trans_viewport vp;
     vp.preserve_aspect_ratio(0.5, 0.5, agg::aspect_ratio_meet);
     vp.world_viewport(x1 - pad, y1 - pad, x2 + pad, y2 + pad);
-    vp.device_viewport(0, 0, width, height);
+    vp.device_viewport(0, 0, c.width, c.height);
     const Matrix view_transform = vp.to_affine();
 
     for (auto it = swf->shapes.begin(); it != swf->shapes.end(); ++it) {
-      render_shape(*swf, *it, view_transform, NULL, width, height, ren_base, ren);
+      render_shape(*swf, *it, view_transform, NULL, c.width, c.height, ren_base, ren);
     }
   }
 
   return 0;
 }
 
-int render_to_png_file(const char* input_swf, const char* class_name,
-                       int width, int height, const char* output_png) {
-  unsigned char* buf = new unsigned char[width * height * 4];
-  render_to_buffer(input_swf, class_name, buf, width, height);
-  unsigned error = lodepng_encode32_file(output_png, buf, width, height);
+int render_to_png_file(const RunConfig& c) {
+  unsigned char* buf = new unsigned char[c.width * c.height * 4];
+  render_to_buffer(c, buf);
+  unsigned error = lodepng_encode32_file(c.output_png.c_str(), buf, c.width, c.height);
   if(error) {
     printf("Error %u: %s\n", error, lodepng_error_text(error));
     return 1;
@@ -514,15 +517,12 @@ int render_to_png_file(const char* input_swf, const char* class_name,
   }
 }
 
-int render_to_png_buffer(const char* input_swf,
-                         const char* class_name,
-                         int width,
-                         int height,
+int render_to_png_buffer(const RunConfig& c,
                          unsigned char** out,
                          size_t* outsize) {
-  unsigned char* buf = new unsigned char[width * height * 4];
-  render_to_buffer(input_swf, class_name, buf, width, height);
-  unsigned error = lodepng_encode32(out, outsize, buf, width, height);
+  unsigned char* buf = new unsigned char[c.width * c.height * 4];
+  render_to_buffer(c, buf);
+  unsigned error = lodepng_encode32(out, outsize, buf, c.width, c.height);
   if(error) {
     printf("Error %u: %s\n", error, lodepng_error_text(error));
     return 1;
@@ -532,10 +532,41 @@ int render_to_png_buffer(const char* input_swf,
 }
 
 int main(int argc, char* argv[]) {
-  if (argc < 2) {
-    fprintf(stderr, "usage: %s file.swf\n", argv[0]);
-    return TRUE;
+  RunConfig config;
+  int c;
+  int opterr = 0;
+  while ((c = getopt (argc, argv, "w:h:o:c:p:")) != -1) {
+    switch (c) {
+      case 'w':
+        config.width = strtol(optarg, 0, 10);
+        break;
+      case 'h':
+        config.height = strtol(optarg, 0, 10);
+        break;
+      case 'p':
+        config.padding = strtol(optarg, 0, 10);
+        break;
+      case 'c':
+        config.class_name = optarg;
+        break;
+      case 'o':
+        config.output_png = optarg;
+        break;
+      case '?':
+          fprintf (stderr,
+                   "Unrecognized option `\\x%x'.\n", optopt);
+        return 1;
+      default:
+        abort();
+    }
   }
-  return render_to_png_file(argv[1], argv[2], atoi(argv[3]), atoi(argv[4]), argv[5]);
+
+  if (optind > (argc - 1)) {
+    fprintf(stderr, "Missing required input swf filename\n");
+    return 1;
+  }
+  config.input_swf = argv[optind];
+
+  return render_to_png_file(config);
 }
 

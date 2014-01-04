@@ -2,6 +2,8 @@
 #include <stdlib.h>
 
 #include "flash_rasterizer.h"
+#include "utils.h"
+
 
 
 // Allocate two VALUE variables to hold the modules we'll create. Ruby values
@@ -43,10 +45,12 @@ void Init_swf_render() {
 VALUE method_render(VALUE self, VALUE swf_name, VALUE class_name, VALUE width, VALUE height) {
   unsigned char* result;
   size_t result_size;
-  render_to_png_buffer(RSTRING_PTR(swf_name),
-                       RSTRING_PTR(class_name),
-                       NUM2INT(width),
-                       NUM2INT(height),
+  RunConfig config;
+  config.input_swf = RSTRING_PTR(swf_name);
+  config.class_name = RSTRING_PTR(class_name);
+  config.width = NUM2INT(width);
+  config.height = NUM2INT(height);
+  render_to_png_buffer(config,
                        &result,
                        &result_size);
   return rb_str_new((char*)result, result_size);
