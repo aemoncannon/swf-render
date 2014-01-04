@@ -6,7 +6,15 @@ for swf in ~/projects/www/creaturebreeder.com/app/assets/flash/accessories/*.swf
     filename=$(basename "$swf")
     extension="${filename##*.}"
     filename="${filename%.*}"
-    cmd="./a.out ${swf} ${filename} 200 200 ./out/${filename}.png"
-    echo $cmd
+    if [[ $filename == Small* ]] || [[ $filename == Young* ]];
+    then
+        cmd="./a.out -c ${filename} -w 200 -h 200 -p 60 -o ./out/${filename}.png ${swf}" 
+    elif [[ $filename == Large* ]] || [[ $filename == Big* ]];
+    then
+        cmd="./a.out -c ${filename} -w 200 -h 200 -p 10 -o ./out/${filename}.png ${swf}" 
+    else
+        cmd="./a.out -c ${filename} -w 200 -h 200 -p 30 -o ./out/${filename}.png ${swf}" 
+    fi
+    echo "$cmd"
     $cmd
 done
