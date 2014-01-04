@@ -498,8 +498,7 @@ int TinySWFParser::getGRADIENT(Tag *tag, FillStyle* style)
 int TinySWFParser::getFOCALGRADIENT(Tag *tag, FillStyle* style)
 {
   getGRADIENT(tag, style);
-  style->focal_point = getFIXED8();    // Focal point location
-  printf("FOCAL POINT: %f\n", style->focal_point);
+  style->focal_point = getFIXED8(); // Focal point location, -1.0 to 1.0
 	return TRUE;
 }
 
