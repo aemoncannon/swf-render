@@ -14,6 +14,12 @@ void Rect::Dump() const {
   printf("(rect xmin=%d xmax=%d ymin=%d ymax=%d)", x_min, x_max, y_min, y_max);
 }
 
+void ColorMatrix::Dump() const {
+  printf("---------\n%f %f %f %f %f\n%f %f %f %f %f\n%f %f %f %f %f\n%f %f %f %f %f\n",
+         m[0],m[1],m[2],m[3],m[4],m[5],m[6],m[7],m[8],m[9],m[10],m[11],m[12],
+         m[13],m[14],m[15],m[16],m[17],m[18],m[19]);
+}
+
 Color FillStyle::gradient_color(double grad_x, double grad_y) const {
   static const double X1 = -16384;
   static const double Y1 = -16384;
@@ -884,10 +890,8 @@ int TinySWFParser::getBLURFILTER(Filter* filter)
 
 int TinySWFParser::getCOLORMATRIXFILTER(Filter* filter)
 {
-  printf("Warning: unhandled color matrix filter.\n");
-  float Matrix[20];
   for (int i = 0; i < 20; i++) {
-    Matrix[i] = getFLOAT();
+    filter->color_matrix.m[i] = getFLOAT();
   }
   return TRUE;
 }

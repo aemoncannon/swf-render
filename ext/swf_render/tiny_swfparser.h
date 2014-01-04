@@ -144,6 +144,31 @@ class Shape {
   void Dump() const;
 };
 
+struct ColorMatrix {
+  ColorMatrix()
+      : m{1, 0, 0, 0, 0,
+          0, 1, 0, 0, 0,
+          0, 0, 1, 0, 0,
+          0, 0, 0, 1, 0} {}
+  float m[20];
+  void transform(Color* c) const {
+    int r = m[0]*(float)c->r + m[1]*(float)c->g + m[2]*(float)c->b + m[3]*(float)c->a + m[4];
+    r = r < 0 ? 0 : r;
+    r = r > 255 ? 255 : r;
+    int g = m[5]*(float)c->r + m[6]*(float)c->g + m[7]*(float)c->b + m[8]*(float)c->a + m[9];
+    g = g < 0 ? 0 : g;
+    g = g > 255 ? 255 : g;
+    int b = m[10]*(float)c->r + m[11]*(float)c->g + m[12]*(float)c->b + m[13]*(float)c->a + m[14];
+    b = b < 0 ? 0 : b;
+    b = b > 255 ? 255 : b;
+    int a = m[15]*(float)c->r + m[16]*(float)c->g + m[17]*(float)c->b + m[18]*(float)c->a + m[19];
+    a = a < 0 ? 0 : a;
+    a = a > 255 ? 255 : a;
+    *c = Color(r, g, b, a);
+  }
+  void Dump() const;
+};
+
 class Filter {
  public:
   enum FilterType {
@@ -158,6 +183,7 @@ class Filter {
   };
   FilterType filter_type;
   unsigned int rgba;
+  ColorMatrix color_matrix;
 };
 
 class Placement {

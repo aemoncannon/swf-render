@@ -53,6 +53,7 @@ return left_fill < other.left_fill;
         compound_shape() :
             m_path(),
             m_affine(),
+            m_color_matrix(NULL),
             m_curve(m_path),
             m_trans(m_curve, m_affine),
             m_styles()
@@ -81,8 +82,11 @@ return left_fill < other.left_fill;
         {
           const FillStyle& fill = (*m_fill_styles)[fill_style_index];
           if (fill.type == FillStyle::kSolid) {
-            return make_rgba(fill.rgba);
-
+            Color c = make_rgba(fill.rgba);
+            if (m_color_matrix) {
+              m_color_matrix->transform(&c);
+            }
+            return c;
           } else if (fill.type == FillStyle::kGradientLinear) {
             return Color(0, 0, 0, 255);
 
@@ -109,6 +113,9 @@ return left_fill < other.left_fill;
             double grad_y = y;
             local_to_gradient.transform(&grad_x, &grad_y);
             span[i] = fill_style.gradient_color(grad_x, grad_y);
+            if (m_color_matrix) {
+              m_color_matrix->transform(&span[i]);
+            }
           }
         }
 
@@ -254,6 +261,7 @@ return left_fill < other.left_fill;
         const std::vector<FillStyle>* m_fill_styles;
         const std::vector<LineStyle>* m_line_styles;
         trans_affine                              m_affine;
+        const ColorMatrix*                              m_color_matrix;
 
     private:
         path_storage                              m_path;
@@ -274,13 +282,16 @@ return left_fill < other.left_fill;
   typedef agg::scanline_u8 scanline;
 
 int render_shape(const ParsedSWF& swf,
-                 const Shape& shape, const Matrix& transform,
+                 const Shape& shape,
+                 const Matrix& transform,
+                 const ColorMatrix* color_matrix,
                  int clip_width, int clip_height,
                  renderer_base& ren_base,
                  renderer_scanline& ren) {
   agg::compound_shape  m_shape;
   m_shape.set_shape(&shape);
   m_shape.m_affine = transform;
+  m_shape.m_color_matrix = color_matrix;
   while (m_shape.read_next()) {
 //    m_shape.scale(clip_width, height);
     agg::rasterizer_scanline_aa<agg::rasterizer_sl_clip_dbl> ras;
@@ -341,7 +352,11 @@ int render_shape(const ParsedSWF& swf,
           stroke.line_cap(agg::butt_cap);
           break;
         }
-        ren.color(make_rgba(style.rgba));
+        Color c = make_rgba(style.rgba);
+        if (color_matrix) {
+          color_matrix->transform(&c);
+        }
+        ren.color(c);
         ras.add_path(stroke, m_shape.style(i).path_id);
         agg::render_scanlines(ras, sl, ren);
       }
@@ -353,6 +368,7 @@ int render_shape(const ParsedSWF& swf,
 int render_sprite(const ParsedSWF& swf,
                   const Sprite& sprite,
                   const Matrix& transform,
+                  const ColorMatrix* color_matrix,
                   int clip_width,
                   int clip_height,
                   renderer_base& ren_base,
@@ -361,11 +377,20 @@ int render_sprite(const ParsedSWF& swf,
     const Placement& placement = *it;
     Matrix m(transform);
     m.premultiply(placement.matrix);
+    const ColorMatrix* color_m = color_matrix;
+    if (placement.filters.size()) {
+      for (auto it = placement.filters.begin(); it != placement.filters.end(); ++it) {
+        if (it->filter_type == Filter::kFilterColorMatrix) {
+          color_m = &it->color_matrix;
+          color_m->Dump();
+        }
+      }
+    }
     if (const Sprite* sprite = swf.SpriteByCharacterId(placement.character_id)) {
-      render_sprite(swf, *sprite, m, clip_width, clip_height, ren_base, ren);
+      render_sprite(swf, *sprite, m, color_m, clip_width, clip_height, ren_base, ren);
     }
     if (const Shape* shape = swf.ShapeByCharacterId(placement.character_id)) {
-      render_shape(swf, *shape, m, clip_width, clip_height, ren_base, ren);
+      render_shape(swf, *shape, m, color_m, clip_width, clip_height, ren_base, ren);
     }
   }
   return 0;
@@ -453,7 +478,7 @@ int render_to_buffer(const char* input_swf, const char* class_name, unsigned cha
     vp.device_viewport(0, 0, width, height);
     const Matrix view_transform = vp.to_affine();
 
-    render_sprite(*swf, *sprite, view_transform, width, height, ren_base, ren);
+    render_sprite(*swf, *sprite, view_transform, NULL, width, height, ren_base, ren);
   } else {
     assert(swf->shapes.size());
 
@@ -470,8 +495,7 @@ int render_to_buffer(const char* input_swf, const char* class_name, unsigned cha
     const Matrix view_transform = vp.to_affine();
 
     for (auto it = swf->shapes.begin(); it != swf->shapes.end(); ++it) {
-      printf("rendering shape");
-      render_shape(*swf, *it, view_transform, width, height, ren_base, ren);
+      render_shape(*swf, *it, view_transform, NULL, width, height, ren_base, ren);
     }
   }
 
