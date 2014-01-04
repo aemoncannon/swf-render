@@ -35,6 +35,7 @@ Color FillStyle::gradient_color(double grad_x, double grad_y) const {
     pos = std::max(0.0, std::min(1.0, sqrt((grad_x * grad_x) + (grad_y * grad_y)) / kGradRadius));
     break;
   case FillStyle::kGradientFocal: {
+    // See http://stackoverflow.com/questions/1073336/circle-line-collision-detection
     const double r = X2;
     const double x1 = r * focal_point;
     const double y1 = 0;

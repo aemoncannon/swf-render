@@ -229,18 +229,18 @@ signed int SWFStream::getSI32()
 float SWFStream::getFIXED8() // 16-bit 8.8 fixed-point number => A(7, 8)
 {
 	float value = 0;
-	value = getSI8() / (float)0x100;
-	value += getSI8();
-//    value = getSI16() / (1 << 8);
+	// value = getSI8() / (float)0x100;
+	// value += getUI8();
+  value = (float)getSI16() / (float)(1 << 8);
 	return value;
 }
 
 float SWFStream::getFIXED() // 32-bit 16.16 fixed-point number => A (15, 16)
 {
 	float value = 0;
-	value = getSI16() / (float)0x10000;
-	value += getSI16();
-//  value = getSI32() / (float)(1 << 16);
+	// value = getSI16() / (float)0x10000;
+	// value += getSI16();
+  value = (float)getSI32() / (float)(1 << 16);
 	return value;
 }
 
