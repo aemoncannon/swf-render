@@ -3,10 +3,10 @@
 
 #include <stdlib.h>
 
-int render_to_png_file(const char* input_swf, const char* output_png);
-int render_to_png_buffer(const char* input_swf,
-                         int width,
-                         int height,
+struct RunConfig;
+
+int render_to_png_file(const RunConfig& c);
+int render_to_png_buffer(const RunConfig& c,
                          unsigned char** out,
                          size_t* outsize);
 

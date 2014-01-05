@@ -1,5 +1,5 @@
 # To compile and build the local bundle
-rake compile
+rake clean && rake compile
 
 # To test using the bundle
 irb -Ilib -r swf_render

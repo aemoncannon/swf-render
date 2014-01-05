@@ -1,7 +1,6 @@
 require 'mkmf'
-require 'fileutils'
 
-extension_name = "swf_render"
+#require 'fileutils'
 
 #srcdir = File.dirname(__FILE__)
 # $objs = (
@@ -11,8 +10,8 @@ extension_name = "swf_render"
 #  Dir.glob("#{srcdir}/third_party/swfparser/*.cpp") +
 #  Dir.glob("#{srcdir}/third_party/lodepng/*.cpp")).collect{|cpp| cpp.gsub(".cpp", ".o")}
 
-$CPPFLAGS += " -Wno-unused-value "
+$CPPFLAGS += "-std=c++11 -Wno-unused-value "
 
-have_library("z")
-have_library("stdc++")
-create_makefile(extension_name)
+abort "missing libz" unless  have_library("z")
+abort "missing c++ standard library" unless have_library("stdc++")
+create_makefile "swf_render/swf_render"
