@@ -1,6 +1,6 @@
 Gem::Specification.new do |s|
   s.name    = "swf_render"
-  s.version = "0.0.2"
+  s.version = "0.0.3"
   s.summary = "Render SWFs"
   s.author  = "Aemon Cannon"
   s.email  = "aemoncannon@gmail.com"
