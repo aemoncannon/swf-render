@@ -25,7 +25,13 @@
 extern "C" VALUE SWFRender = Qnil;
 
 extern "C" void Init_swf_render();
-extern "C" VALUE method_render(VALUE self, VALUE swf_name, VALUE class_name, VALUE width, VALUE height);
+extern "C" VALUE method_render(
+  VALUE self,
+  VALUE swf_name,
+  VALUE class_name,
+  VALUE width,
+  VALUE height,
+  VALUE padding);
 
 // Initial setup function, takes no arguments and returns nothing. Some API
 // notes:
@@ -41,8 +47,7 @@ extern "C" VALUE method_render(VALUE self, VALUE swf_name, VALUE class_name, VAL
 // 
 void Init_swf_render() {
   SWFRender = rb_define_module("SWFRender");
-  rb_define_singleton_method(SWFRender, "render", (VALUE(*)(...))method_render, 4);
-
+  rb_define_singleton_method(SWFRender, "render", (VALUE(*)(...))method_render, 5);
 }
 
 // The business logic -- this is the function we're exposing to Ruby. It returns
@@ -55,8 +60,14 @@ void Init_swf_render() {
 // * NUM2INT converts a Ruby Fixnum object to a C int
 // * INT2NUM converts a C int to a Ruby Fixnum object
 // * rb_ary_store(VALUE, int, VALUE) sets the nth element of a Ruby array
-// 
-VALUE method_render(VALUE self, VALUE swf_name, VALUE class_name, VALUE width, VALUE height) {
+//
+VALUE method_render(
+    VALUE self,
+    VALUE swf_name,
+    VALUE class_name,
+    VALUE width,
+    VALUE height,
+    VALUE padding) {
   unsigned char* result;
   size_t result_size;
   RunConfig config;
