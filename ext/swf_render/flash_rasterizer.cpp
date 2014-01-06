@@ -540,8 +540,11 @@ int render_to_png_buffer(const RunConfig& c,
                          unsigned char** out,
                          size_t* outsize) {
   unsigned char* buf = new unsigned char[c.width * c.height * 4];
+  printf("Rendering with width %d,  height %d, and padding %d...", c.width, c.height, c.padding);
   render_to_buffer(c, buf);
+  printf("Encoding PNG...");
   unsigned error = lodepng_encode32(out, outsize, buf, c.width, c.height);
+  printf("Resulting PNG size is %d bytes.", (int)*outsize);
   if(error) {
     printf("Error %u: %s\n", error, lodepng_error_text(error));
     return 1;
