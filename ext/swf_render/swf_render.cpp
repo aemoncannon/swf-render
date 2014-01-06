@@ -75,6 +75,7 @@ VALUE method_render(
   config.class_name = RSTRING_PTR(class_name);
   config.width = NUM2INT(width);
   config.height = NUM2INT(height);
+  config.padding = NUM2INT(padding);
   render_to_png_buffer(config,
                        &result,
                        &result_size);
