@@ -242,11 +242,6 @@ TinySWFParser::~TinySWFParser()
 
 ParsedSWF* TinySWFParser::parse(const char *filename)
 {
-    return parseWithCallback(filename, NULL);
-}
-
-ParsedSWF* TinySWFParser::parseWithCallback(const char *filename, ProgressUpdateFunctionPtr progressUpdate)
-{
     assert(filename);
     if (!filename) {
         return NULL;
@@ -566,46 +561,24 @@ int TinySWFParser::getMATRIX(Matrix* matrix)
 ///////////////////////////////////////
 //// Color Transformation
 ///////////////////////////////////////
-int TinySWFParser::getCXFORM(VObject &cxObject)
+int TinySWFParser::getCXFORM()
 {
 	unsigned int HasAddTerms, HasMultTerms, Nbits;
 	signed int RedMultTerm, GreenMultTerm, BlueMultTerm, RedAddTerm, GreenAddTerm, BlueAddTerm;
-	
 	setByteAlignment(); // CXFORM Record must be byte aligned.
-	
-	DEBUGMSG("{\n");
-	cxObject.setTypeInfo("CXFORM");
-    
 	HasAddTerms		= getUBits(1);
 	HasMultTerms	= getUBits(1);
 	Nbits			= getUBits(4);
-    
-    cxObject["HasAddTerms"]     = HasAddTerms;
-    cxObject["HasMultTerms"]    = HasMultTerms;
-    cxObject["Nbits"]           = Nbits;
-	DEBUGMSG("HasAddTerms : %d,\nHasMultTerms : %d,\nNbits : %d", Nbits, HasAddTerms, HasMultTerms);
-	
 	if (HasMultTerms) {
 		RedMultTerm		= getSBits(Nbits);  // in swf file, it's still a SB
-        GreenMultTerm	= getSBits(Nbits);
+    GreenMultTerm	= getSBits(Nbits);
 		BlueMultTerm	= getSBits(Nbits);
-        cxObject["RedMultTerm"]     = FIXED8TOFLOAT(RedMultTerm);   // convert it to FIXED8 to be meaningful for the user.
-        cxObject["GreenMultTerm"]   = FIXED8TOFLOAT(GreenMultTerm);
-        cxObject["BlueMultTerm"]    = FIXED8TOFLOAT(BlueMultTerm);
-		DEBUGMSG(",\nRedMultTerm : %f,\nGreenMultTerm : %f,\nBlueMultTerm : %f", RedMultTerm, GreenMultTerm, BlueMultTerm);
 	}
-	
 	if (HasAddTerms) {
 		RedAddTerm		= getSBits(Nbits);
-        GreenAddTerm	= getSBits(Nbits);
+    GreenAddTerm	= getSBits(Nbits);
 		BlueAddTerm		= getSBits(Nbits);
-        cxObject["RedAddTerm"] = RedAddTerm;
-        cxObject["GreenAddTerm"] = GreenAddTerm;
-        cxObject["BlueAddTerm"] = BlueAddTerm;
-		DEBUGMSG(",\nRedAddTerm : %d,\nGreenAddTerm : %d,\nBlueAddTerm : %d", RedAddTerm, GreenAddTerm, BlueAddTerm);
 	}
-	DEBUGMSG("\n}");
-	
 	return TRUE;
 }
 
