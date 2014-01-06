@@ -1,5 +1,5 @@
 require 'rake/extensiontask'
-spec = Gem::Specification.load('swf-render.gemspec')
+spec = Gem::Specification.load('swf_render.gemspec')
 
 Rake::ExtensionTask.new do |ext|
   ext.name = 'swf_render'                # indicate the name of the extension.

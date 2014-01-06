@@ -1,14 +1,10 @@
-# To compile and build the local bundle
-rake clean && rake compile
+A ruby gem for rendering flash swf files. This project contains a
+native exension which uses the AntiGrain Graphics Library to render
+flash swf frames directly to PNGs. I've made a special effort to minimize
+external dependencies so that compilation of the extension requires
+only only stdc++ and libz.
 
-# To test using the bundle
-irb -Ilib -r swf_render
-
-# To build gem
-rake gem
-
-# To install and test gem
-sudo gem install pkg/foo.gem
-irb
-> require 'swf_render'
-> SWFRender::foo
+Special thanks to:
+Maxim Shemanarev for AGG
+Rintarou for swfparser
+Lode Vandevenne for lodepng
