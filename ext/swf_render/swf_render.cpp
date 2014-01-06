@@ -1,10 +1,24 @@
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+// In the header you should put also a copyright notice something like:
+//
+// Copyright Aemon Cannon 2013,2013
+
 #include <ruby.h>
 #include <stdlib.h>
 
 #include "flash_rasterizer.h"
 #include "utils.h"
-
-
 
 // Allocate two VALUE variables to hold the modules we'll create. Ruby values
 // are all of type VALUE. Qnil is the C representation of Ruby's nil.
