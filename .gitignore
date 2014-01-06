@@ -6,3 +6,8 @@ tmp
 pkg
 lib
 .DS_Store
+*.bundle
+*.swf
+swfrender
+*.sh
+*.gem
