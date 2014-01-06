@@ -480,7 +480,7 @@ int render_to_buffer(const RunConfig& c, unsigned char* buf) {
   rbuf.attach(buf, c.width, c.height, c.width * 4);
   pixfmt pixf(rbuf);
   renderer_base ren_base(pixf);
-//  ren_base.clear(Color());
+  ren_base.clear(Color());
   renderer_scanline ren(ren_base);
   const double pad = c.padding;
   if (const Sprite* sprite = swf->SpriteByClassName(c.class_name.c_str())) {
