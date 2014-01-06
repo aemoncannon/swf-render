@@ -14,6 +14,7 @@
 #include "stdarg.h"
 
 #include "tiny_debug.h"
+#include "tiny_VObject.h"
 
 #ifndef _COMMON_H
 #define _COMMON_H

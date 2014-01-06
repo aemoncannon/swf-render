@@ -1,9 +1,9 @@
 #include "tiny_common.h"
 #include "tiny_SWFStream.h"
+#include "tiny_VObject.h"
 #include "agg_trans_affine.h"
 #include "agg_color_rgba.h"
 #include <vector>
-#include <string>
 #include <map>
 #include <assert.h>
 
@@ -18,7 +18,7 @@ Color make_rgba(unsigned v);
 
 class Rect {
  public:
- Rect() : x_min(0), y_min(0), x_max(0), y_max(0) {}
+  Rect() : x_min(0), y_min(0), x_max(0), y_max(0) {}
   bool is_valid() const {
     return x_min != 0 || y_min != 0 || x_max != 0 || y_max != 0;
   }
@@ -130,8 +130,8 @@ class CurveRecord : public ShapeRecord {
 
 class Shape {
  public:
- Shape() : uses_fill_winding_rule(false), uses_non_scaling_strokes(false),
-    uses_scaling_strokes(false) {}
+  Shape() : uses_fill_winding_rule(false), uses_non_scaling_strokes(false),
+      uses_scaling_strokes(false) {}
   int character_id;
   Rect shape_bounds;
   Rect edge_bounds;
@@ -145,11 +145,11 @@ class Shape {
 };
 
 struct ColorMatrix {
-ColorMatrix()
-: m{1, 0, 0, 0, 0,
-      0, 1, 0, 0, 0,
-      0, 0, 1, 0, 0,
-      0, 0, 0, 1, 0} {}
+  ColorMatrix()
+      : m{1, 0, 0, 0, 0,
+          0, 1, 0, 0, 0,
+          0, 0, 1, 0, 0,
+          0, 0, 0, 1, 0} {}
   float m[20];
   void transform(Color* c) const {
     int r = m[0]*(float)c->r + m[1]*(float)c->g + m[2]*(float)c->b + m[3]*(float)c->a + m[4];
@@ -188,7 +188,7 @@ class Filter {
 
 class Placement {
  public:
- Placement() : character_id(-1), depth(-1) {}
+  Placement() : character_id(-1), depth(-1) {}
   bool operator<(const Placement& other) const { return depth < other.depth; }
   int character_id;
   int depth;
@@ -225,35 +225,95 @@ class ParsedSWF {
 typedef int (*ProgressUpdateFunctionPtr)(unsigned int progress);
 
 class TinySWFParser	: public SWFStream {
- public:
-  TinySWFParser();
-  ~TinySWFParser();
-  ParsedSWF* parse(const char *filename);
+public:
+    TinySWFParser();
+    ~TinySWFParser();
+    
+    //// User Operation
+    ParsedSWF* parse(const char *filename);
+    ParsedSWF* parseWithCallback(const char *filename, ProgressUpdateFunctionPtr progressUpdate);
 
- private:
-  int HandleSymbolClass(Tag *tag, ParsedSWF* swf);
-  int HandleDefineSprite(Tag *tag, ParsedSWF* swf);
-  void HandleDefineShape(Tag* tag, ParsedSWF* swf);
-  void HandlePlaceObject23(Tag* tag, Sprite* sprite, int current_frame);
-  unsigned int	getRGB();
-  unsigned int	getARGB() { return getUI32(); }
-  unsigned int	getRGBA() { return getUI32(); }
-  int             getGRADIENT(Tag *tag, FillStyle* style);
-  int             getFOCALGRADIENT(Tag *tag, FillStyle* style);
-  int             getRECT(Rect* rect);
-  int             getMATRIX(Matrix* matrix);
-  int             getFILLSTYLE(Tag *tag, FillStyle* styles);
-  int             getFILLSTYLEARRAY(Tag *tag, std::vector<FillStyle>* styles);
-  int             getLINESTYLEARRAY(Tag *tag, std::vector<LineStyle>* styles);
-  int             getSHAPE(Tag *tag, Shape* shape);
-  int             getSHAPEWITHSTYLE(Tag *tag, Shape* shape);
-  int             getFILTERLIST(Placement* placement);    // SWF8 or later
-  int             getTagCodeAndLength(Tag *tag);
-  int             getCXFORM();
-  int             getCXFORMWITHALPHA();
-  int             getCOLORMATRIXFILTER(Filter* filter);
-  int             getBLURFILTER(Filter* filter);
-  int             getGLOWFILTER(Filter* filter);
+    int HandleSymbolClass(Tag *tag, ParsedSWF* swf);
+    int HandleDefineSprite(Tag *tag, ParsedSWF* swf);
+    void HandleDefineShape(Tag* tag, ParsedSWF* swf);
+    void HandlePlaceObject23(Tag* tag, Sprite* sprite, int current_frame);
+    
+	//// Color Operations
+	unsigned int	getRGB();
+	unsigned int	getARGB() { return getUI32(); }
+	unsigned int	getRGBA() { return getUI32(); }
+	
+	//// Gradient Operation
+    int             getGRADIENT(Tag *tag, FillStyle* style);
+    int             getFOCALGRADIENT(Tag *tag, FillStyle* style);
+	
+	//// Rectangle Operations
+    int             getRECT(Rect* rect);
+	
+	//// Matrix Operation
+    int             getMATRIX(Matrix* matrix);
+	
+	//// Transformation
+	int             getCXFORM(VObject &cxObject);
+	int             getCXFORMWITHALPHA();
+	
+	//// Fill & Line Styles
+    int             getFILLSTYLE(Tag *tag, FillStyle* styles);
+	int             getFILLSTYLEARRAY(Tag *tag, std::vector<FillStyle>* styles);
+	int             getLINESTYLEARRAY(Tag *tag, std::vector<LineStyle>* styles);
+    
+    //// Morph Fill & Line Styles
+    int             getMORPHGRADIENT(Tag *tag, VObject &gradientObject);
+    int             getMORPHFILLSTYLE(Tag *tag, VObject &fillStyleObject);
+	int             getMORPHFILLSTYLEARRAY(Tag *tag, VObject &fillStyleArrayObject);
+    int             getMORPHLINESTYLE(Tag *tag, VObject &lineStyleObject);
+	int             getMORPHLINESTYLEARRAY(Tag *tag, VObject &lineStyleArrayObject);
+
+	//// Shape Operations
+	int             getSHAPE(Tag *tag, Shape* shape);
+	int             getSHAPEWITHSTYLE(Tag *tag, Shape* shape);
+	
+    //// TEXTRECORD
+    int             getTEXTRECORD(Tag *tag, unsigned int GlyphBits, unsigned int AdvanceBits);
+    
+    //// BUTTONRECORD
+    int             getBUTTONRECORD(Tag *tag, VObject &btnRecordObject);
+    int             getBUTTONCONDACTION(VObject &btnCondObject);
+    
+	//// ACTIONRECORD	
+	int             getACTIONRECORD(VObject &actRecordObject);
+    
+    //// Action Operations
+    int             getActionCodeAndLength(Action *action);
+	
+	//// CLIPACTIONS and CLIPACTIONRECORD
+	#define CLIPEVENT_KEYPRESS_MASK (1<<22) // 0x00400000
+	#define CLIPEVENT_DRAGOUT_MASK  (1<<23) // 0x00800000
+		
+	unsigned int    getCLIPEVENTFLAGS();	// FIXME
+	unsigned int    getCLIPACTIONRECORD(VObject &clipActionRecordObject);
+	int             getCLIPACTIONS(VObject &clipActionsObject);
+    //// Filters
+    int             getFILTERLIST(Placement* placement);    // SWF8 or later
+	
+    //// SOUNDINFO
+    int             getSOUNDINFO(VObject &soundInfoObject);
+    
+    
+	//// Tag Operations
+	int             getTagCodeAndLength(Tag *tag);
+
+private:
+    
+    //// Internally used Filter getters
+    int             getCOLORMATRIXFILTER(Filter* filter);
+    int             getCONVOLUTIONFILTER(VObject &filterObject);
+    int             getBLURFILTER(Filter* filter);
+    int             getDROPSHADOWFILTER(VObject &filterObject);
+    int             getGLOWFILTER(Filter* filter);
+    int             getBEVELFILTER(VObject &filterObject);
+    int             getGRADIENTGLOWFILTER(VObject &filterObject);
+    int             getGRADIENTBEVELFILTER(VObject &filterObject);
 };
 
 #endif
