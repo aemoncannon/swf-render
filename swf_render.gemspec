@@ -10,5 +10,5 @@ Gem::Specification.new do |s|
   s.files = Dir["ext/swf_render/*.{h,cpp}"] + Dir["lib/**/*"] + Dir['ext/**/extconf.rb']
   s.platform = Gem::Platform::RUBY
   s.require_paths = [ 'lib', 'ext' ]
-  s.extensions = Dir['ext/**/extconf.rb']
+  s.extensions = ['ext/swf_render/extconf.rb']
 end
