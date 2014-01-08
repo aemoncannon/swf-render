@@ -12,5 +12,4 @@ require 'mkmf'
 
 $CPPFLAGS += "-std=c++11 -Wno-unused-value "
 
-abort "missing c++ standard library" unless have_library("stdc++")
 create_makefile "swf_render"
