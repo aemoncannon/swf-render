@@ -394,13 +394,15 @@ int render_sprite(const ParsedSWF& swf,
                   int clip_height,
                   renderer_base& ren_base,
                   renderer_scanline& ren) {
-  for (auto it = sprite.placements.begin(); it != sprite.placements.end(); ++it) {
+  for (std::vector<Placement>::const_iterator it =
+         sprite.placements.begin(); it != sprite.placements.end(); ++it) {
     const Placement& placement = *it;
     Matrix m(transform);
     m.premultiply(placement.matrix);
     const ColorMatrix* color_m = color_matrix;
     if (placement.filters.size()) {
-      for (auto it = placement.filters.begin(); it != placement.filters.end(); ++it) {
+      for (std::vector<Filter>::const_iterator it =
+             placement.filters.begin(); it != placement.filters.end(); ++it) {
         if (it->filter_type == Filter::kFilterColorMatrix) {
           color_m = &it->color_matrix;
         }
@@ -457,7 +459,8 @@ void get_bounds(const ParsedSWF& swf,
                 double* x_max_out,
                 double* y_min_out,
                 double* y_max_out) {
-  for (auto it = sprite.placements.begin(); it != sprite.placements.end(); ++it) {
+  for (std::vector<Placement>::const_iterator it =
+         sprite.placements.begin(); it != sprite.placements.end(); ++it) {
     const Placement& placement = *it;
     Matrix m(transform);
     m.premultiply(placement.matrix);
@@ -515,7 +518,8 @@ int render_to_buffer(const RunConfig& c, unsigned char* buf) {
     vp.device_viewport(0, 0, c.width, c.height);
     const Matrix view_transform = vp.to_affine();
 
-    for (auto it = swf->shapes.begin(); it != swf->shapes.end(); ++it) {
+    for (std::vector<Shape>::const_iterator it = swf->shapes.begin();
+         it != swf->shapes.end(); ++it) {
       render_shape(*swf, *it, view_transform, NULL, c.width, c.height, ren_base, ren);
     }
   }

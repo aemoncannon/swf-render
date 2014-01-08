@@ -199,7 +199,7 @@ void ParsedSWF::Dump() const {
 }
 
 const Sprite* ParsedSWF::SpriteByCharacterId(int character_id) const {
-  auto it = character_id_to_sprite_index.find(character_id);
+  std::map<int, int>::const_iterator it = character_id_to_sprite_index.find(character_id);
   if (it != character_id_to_sprite_index.end()) {
     const int index = it->second;
     return &sprites.at(index);
@@ -208,7 +208,7 @@ const Sprite* ParsedSWF::SpriteByCharacterId(int character_id) const {
 }
 
 const Shape* ParsedSWF::ShapeByCharacterId(int character_id) const {
-  auto it = character_id_to_shape_index.find(character_id);
+  std::map<int, int>::const_iterator it = character_id_to_shape_index.find(character_id);
   if (it != character_id_to_shape_index.end()) {
     const int index = it->second;
     return &shapes.at(index);

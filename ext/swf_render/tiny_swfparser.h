@@ -145,11 +145,28 @@ class Shape {
 };
 
 struct ColorMatrix {
-ColorMatrix()
-: m{1, 0, 0, 0, 0,
-      0, 1, 0, 0, 0,
-      0, 0, 1, 0, 0,
-      0, 0, 0, 1, 0} {}
+ColorMatrix() {
+  m[0] = 1;
+  m[1] = 0;
+  m[2] = 0;
+  m[3] = 0;
+  m[4] = 0;
+  m[5] = 0;
+  m[6] = 1;
+  m[7] = 0;
+  m[8] = 0;
+  m[9] = 0;
+  m[10] = 0;
+  m[11] = 0;
+  m[12] = 1;
+  m[13] = 0;
+  m[14] = 0;
+  m[15] = 0;
+  m[16] = 0;
+  m[17] = 0;
+  m[18] = 1;
+  m[19] = 0;
+ }
   float m[20];
   void transform(Color* c) const {
     int r = m[0]*(float)c->r + m[1]*(float)c->g + m[2]*(float)c->b + m[3]*(float)c->a + m[4];
