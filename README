@@ -1,8 +1,8 @@
-A ruby gem for rendering flash swf files. This project contains a
+A ruby gem for rendering flash SWF files. This project contains a
 native exension which uses the AntiGrain Graphics Library to render
-flash swf frames directly to PNGs. I've made a special effort to minimize
-external dependencies so that compilation of the extension requires
-only only stdc++ and libz.
+flash frames directly to PNGs. I've made a special effort to minimize
+(eliminate all) external dependencies in this extension to improve
+portability.
 
 Special thanks to:
 Maxim Shemanarev for AGG
