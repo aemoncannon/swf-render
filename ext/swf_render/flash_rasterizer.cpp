@@ -26,6 +26,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <map>
+#include <algorithm>
 #include "agg_rendering_buffer.h"
 #include "agg_trans_viewport.h"
 #include "agg_path_storage.h"

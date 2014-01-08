@@ -3,6 +3,8 @@
 #include "tiny_TagDefine.h"
 #include "tiny_Util.h"
 
+#include <algorithm>
+
 Color make_rgba(unsigned v) {
   return Color(v & 0xFF,
                (v >> 8) & 0xFF,
