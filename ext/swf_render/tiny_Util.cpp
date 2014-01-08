@@ -12,6 +12,7 @@
 
 #include "lodepng.h"
 
+#include <assert.h>
 #include <vector>
 
 void debugMsg( const char* fmt, ... )
@@ -50,15 +51,14 @@ int inflate2Memory (Stream *stream, unsigned char **output_ptr)
     for(;;) {
       int numBytes = stream->read(in, CHUNK);
       if (numBytes == 0) {
-        printf("EOS\n");
+        // End of stream
         break;
       }
       full_input.insert(full_input.end(), &in[0], &in[CHUNK]);
     }
 
-   printf("Finished reading %d bytes.\n", (int)full_input.size());
    LodePNGDecompressSettings settings;
-   settings.ignore_adler32 = false;
+   settings.ignore_adler32 = true;
    settings.custom_zlib = NULL;
    settings.custom_inflate = NULL;
    settings.custom_context = NULL;
@@ -68,8 +68,7 @@ int inflate2Memory (Stream *stream, unsigned char **output_ptr)
        &full_input[0],
        full_input.size(),
        &settings);
-   printf("Finished with status %d.\n", status);
-   printf("Inflated size: %d.\n", (int)inflated_stream_size);
+   assert(status == 0);
    return (size_t)inflated_stream_size;
 }
 
