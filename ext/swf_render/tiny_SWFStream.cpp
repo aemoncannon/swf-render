@@ -22,8 +22,8 @@ SWFStream::SWFStream()
 	_stream_pos		= 0;
 	_stream_size	= 0;
 	SWFVersion		= 0;
-	bzero (Signature, 4);
-	FileLength		= 0;
+	memset(Signature, 0, 4);
+	FileLength = 0;
 }
 
 SWFStream::~SWFStream()
