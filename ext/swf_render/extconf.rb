@@ -10,6 +10,6 @@ require 'mkmf'
 #  Dir.glob("#{srcdir}/third_party/swfparser/*.cpp") +
 #  Dir.glob("#{srcdir}/third_party/lodepng/*.cpp")).collect{|cpp| cpp.gsub(".cpp", ".o")}
 
-$CPPFLAGS += "-Wno-unused-value "
+$CPPFLAGS += "-O3 -Wno-unused-value "
 
 create_makefile "swf_render"
