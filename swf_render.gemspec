@@ -2,7 +2,7 @@ Gem::Specification.new do |s|
   s.name    = "swf_render"
   s.homepage    = "http://github.com/aemoncannon/swf_render"
   s.description    = "Render flash swfs to pngs"
-  s.version = "0.0.10"
+  s.version = "0.0.11"
   s.summary = "Render SWFs"
   s.author  = "Aemon Cannon"
   s.email  = "aemoncannon@gmail.com"
