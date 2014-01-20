@@ -669,8 +669,8 @@ int TinySWFParser::getLINESTYLEARRAY(Tag *tag, std::vector<LineStyle>* styles)
             unsigned int Width, StartCapStyle, JoinStyle, HasFillFlag, NoHScaleFlag, NoVScaleFlag, PixelHintingFlag, NoClose, EndCapStyle, MiterLimitFactor, Color;
             style.width           = getUI16();
 
-            style.start_cap_style   = static_cast<LineStyle::CapStyle>(getUBits(2)); // 0 = Round cap, 1 = No cap, 2 = Square cap
-            style.join_style       = static_cast<LineStyle::JoinStyle>(getUBits(2)); // 0 = Round join, 1 = Bevel join, 2 = Miter join
+            style.start_cap_style = static_cast<LineStyle::CapStyle>(getUBits(2)); // 0 = Round cap, 1 = No cap, 2 = Square cap
+            style.join_style = static_cast<LineStyle::JoinStyle>(getUBits(2)); // 0 = Round join, 1 = Bevel join, 2 = Miter join
             style.has_fill     = getUBits(1);
             style.no_hscale_flag    = getUBits(1);
             style.no_vscale_flag    = getUBits(1);

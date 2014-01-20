@@ -31,6 +31,8 @@ class Rect {
 
 class FillStyle {
  public:
+  FillStyle()
+    : type(kSolid), rgba(0), focal_point(0) {}
   enum Type {
     kSolid = 0x00,
     kGradientLinear = 0x10,
@@ -54,6 +56,18 @@ class FillStyle {
 
 class LineStyle {
  public:
+ LineStyle()
+   : width(0),
+    start_cap_style(kCapRound),
+    join_style(kJoinRound),
+    has_fill(false),
+    no_hscale_flag(0),
+    no_vscale_flag(0),
+    pixel_hinting_flag(0),
+    no_close(0),
+    end_cap_style(kCapRound),
+    miter_limit_factor(0),
+    rgba(0) {}
   enum JoinStyle {
     kJoinRound = 0,
     kJoinBevel = 1,
@@ -130,7 +144,9 @@ class CurveRecord : public ShapeRecord {
 
 class Shape {
  public:
- Shape() : uses_fill_winding_rule(false), uses_non_scaling_strokes(false),
+ Shape() : character_id(-1),
+    uses_fill_winding_rule(false),
+    uses_non_scaling_strokes(false),
     uses_scaling_strokes(false) {}
   int character_id;
   Rect shape_bounds;
