@@ -35,7 +35,7 @@ SWFStream::~SWFStream()
 
 int SWFStream::open(const char *filename)
 {
-	FILE *file_stream = fopen (filename, "r");
+	FILE *file_stream = fopen (filename, "rb");
     
     if (!file_stream) {
         DEBUGMSG("Error: No such file.\n");
