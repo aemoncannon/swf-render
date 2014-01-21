@@ -57,7 +57,7 @@ class FillStyle {
 class LineStyle {
  public:
  LineStyle()
-   : width(0),
+   : width(1),
     start_cap_style(kCapRound),
     join_style(kJoinRound),
     has_fill(false),

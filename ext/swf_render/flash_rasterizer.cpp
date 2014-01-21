@@ -161,7 +161,6 @@ return left_fill < other.left_fill;
             int last_fill1 = -1;
             int last_line_style = -1;
             int fill_style_offset = 0;
-            double ax, ay, cx, cy;
             for (int i = m_record_index; i < m_shape->records.size(); ++i) {
               const ShapeRecord* record = m_shape->records[i];
               switch (record->RecordType()) {

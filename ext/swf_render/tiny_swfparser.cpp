@@ -659,32 +659,29 @@ int TinySWFParser::getLINESTYLEARRAY(Tag *tag, std::vector<LineStyle>* styles)
     return TRUE;
   }
 	// LineStyles
-    // DefineShape1/2/3 => LINESTYLE[]
-    // DefineShape4     => LINESTYLE2[]
+  // DefineShape1/2/3 => LINESTYLE[]
+  // DefineShape4     => LINESTYLE2[]
     if (tag->TagCode == TAG_DEFINESHAPE4) {   // DefineShape4 => LINESTYLE2[]
 
         for (i = 0; i < LineStyleCount; i++) { // Index start from 1
             LineStyle style;
             // LINESTYLE2
-            unsigned int Width, StartCapStyle, JoinStyle, HasFillFlag, NoHScaleFlag, NoVScaleFlag, PixelHintingFlag, NoClose, EndCapStyle, MiterLimitFactor, Color;
-            style.width           = getUI16();
-
+            style.width = getUI16();
             style.start_cap_style = static_cast<LineStyle::CapStyle>(getUBits(2)); // 0 = Round cap, 1 = No cap, 2 = Square cap
             style.join_style = static_cast<LineStyle::JoinStyle>(getUBits(2)); // 0 = Round join, 1 = Bevel join, 2 = Miter join
-            style.has_fill     = getUBits(1);
-            style.no_hscale_flag    = getUBits(1);
-            style.no_vscale_flag    = getUBits(1);
+            style.has_fill = getUBits(1);
+            style.no_hscale_flag = getUBits(1);
+            style.no_vscale_flag  = getUBits(1);
             style.pixel_hinting_flag    = getUBits(1);
             getUBits(5); // Reserved must be 0
-            style.no_close         = getUBits(1);
-            style.end_cap_style     = static_cast<LineStyle::CapStyle>(getUBits(2));
+            style.no_close = getUBits(1);
+            style.end_cap_style = static_cast<LineStyle::CapStyle>(getUBits(2));
             if (style.join_style == LineStyle::kJoinMiter) {
                 style.miter_limit_factor = getFIXED8();   // Miter limit factor is an 8.8 fixed-point value.
             }
             if (!style.has_fill) {
                 style.rgba = getRGBA();         // Color
             } else {
-                DEBUGMSG(",\nFillType : ");
                 getFILLSTYLE(tag, &style.fill);  // FillType : FILLSTYLE
             }
             styles->push_back(style);
@@ -717,7 +714,6 @@ int TinySWFParser::getSHAPE(Tag *tag, Shape* shape)
 	setByteAlignment(); // reset bit buffer for byte-alignment
 	NumFillBits = getUBits(4); // NumFillBits
 	NumLineBits = getUBits(4); // NumLineBits
-    DEBUGMSG(",\nShapeRecords : [\n");
   unsigned int recNo = 0;
 
 	while(1) {
