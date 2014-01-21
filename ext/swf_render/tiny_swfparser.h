@@ -107,6 +107,13 @@ class ShapeRecord {
 
 class StyleChangeRecord : public ShapeRecord {
  public:
+   StyleChangeRecord()
+   : flags(0),
+    move_delta_x(0),
+    move_delta_y(0),
+    fill_style0(-1),
+    fill_style1(-1),
+    line_style(-1) {}
   unsigned int flags;
   int move_delta_x;
   int move_delta_y;

@@ -344,7 +344,7 @@ int render_shape(const ParsedSWF& swf,
       if(m_shape.style(i).line >= 0) {
         const LineStyle& style = m_shape.line_style(m_shape.style(i).line);
         if (style.width == 0) continue;
-        const float width = (float)style.width * m_shape.m_affine.scale();
+        const double width = (double)style.width * m_shape.m_affine.scale();
         stroke.width(width);
         switch (style.join_style) {
           case LineStyle::kJoinBevel:
