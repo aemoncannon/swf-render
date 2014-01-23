@@ -476,6 +476,9 @@ void get_bounds(const ParsedSWF& swf,
 int render_to_buffer(const RunConfig& c, unsigned char* buf) {
   TinySWFParser parser;
   ParsedSWF* swf = parser.parse(c.input_swf.c_str());
+  if (c.spec.size()) {
+    swf->ApplySpec(c.spec.c_str());
+  }
   //swf->Dump();
   assert(swf);
 
@@ -581,6 +584,8 @@ int main(int argc, char* argv[]) {
         abort();
     }
   }
+
+  config.spec = "width\t50.0\nname\t'eyhnkwigkw'\ncreature_id\t2930\nsex\t'male'\nspecies\t'FuzCub'\nx\t0\ny\t0\nlife_stage\t\nspeed\t0.6000000000000001\nplayfulness\t0.75\nsleepiness\t0.0\n:body.bow\tv=f\n:body.face_patterns\tv=t\tc='0xc7ab91'\n:body.face.eyes.left_eye.lid\tv=t\tc='0xbb9754'\n:body.face.eyes.right_eye.lid\tv=t\tc='0xbb9754'\n:body.left_whiskers\tv=t\n:body.right_whiskers\tv=t\n:body.right_ear\tsy=0.5\n:body.left_ear\tsy=0.5\n:body.face.nose\tsx=3.0\tsy=3.0\n:body.face.eyes.right_eye\tsx=0.85\tsy=0.85\n:body.face.eyes.left_eye\tsx=0.85\tsy=0.85\n:body.face.eyes.left_eye.eye_color\tc='0x0d4a5e'\n:body.face.eyes.right_eye.eye_color\tc='0x0d4a5e'\n:body.color\tc='0xc9ac76'\n:right_leg.color\tc='0xc9ac76'\n:left_leg.color\tc='0xc9ac76'\n:right_foot.color\tc='0xc9ac76'\n:left_foot.color\tc='0xc9ac76'\n:body.right_ear.color\tc='0xc9ac76'\n:body.left_ear.color\tc='0xc9ac76'\n:body.face.eye_rings.color\tc='0xc9ac76'\n:body.hair.color\tc='0xc9ac76'\n:body.face_patterns.spot1\tv=f\n:body.face_patterns.spot2\tv=f\n:body.face_patterns.spot3\tv=f\n:body.face_patterns.spot4\tv=t\n:body.face_patterns.spot5\tv=f\n:body.face_patterns.spot6\tv=f\n:body.face_patterns.spot7\tv=f\n:body.face_patterns.spot8\tv=f\n:body.face_patterns.spot9\tv=f\n:body.face_patterns.spot10\tv=t\n:body.face_patterns.spot11\tv=f\n:body.face_patterns.spot12\tv=t\n:body.face_patterns.spot13\tv=f\n:body.face_patterns.spot14\tv=t\n:body.face_patterns.spot15\tv=f\n:body.face_patterns.spot16\tv=f\n:body.face_patterns.spot17\tv=t\n:body.face_patterns.spot18\tv=f\n:body.face_patterns.spot19\tv=t\n:body.face_patterns.spot20\tv=f\n:body.face_patterns.spot21\tv=f\n:body.face_patterns.spot22\tv=f\n:body.face_patterns.spot23\tv=f";
 
   if (optind > (argc - 1)) {
     fprintf(stderr, "Missing required input swf filename\n");

@@ -16,6 +16,15 @@ void Rect::Dump() const {
   printf("(rect xmin=%d xmax=%d ymin=%d ymax=%d)", x_min, x_max, y_min, y_max);
 }
 
+void Placement::ApplyModifier(const Modifier& mod) {
+  matrix.scale(mod.sx, mod.sy);
+  visible = mod.visible;
+  Filter filter;
+  filter.filter_type = kFilterColorMatrix;
+  filter.color_matrix = ColorMatrix::WithColor(make_rgba(mod.rgba));
+  filters.push_back(filter);
+}
+
 void ColorMatrix::Dump() const {
   printf("---------\n%f %f %f %f %f\n%f %f %f %f %f\n%f %f %f %f %f\n%f %f %f %f %f\n",
          m[0],m[1],m[2],m[3],m[4],m[5],m[6],m[7],m[8],m[9],m[10],m[11],m[12],
@@ -233,6 +242,49 @@ const Sprite* ParsedSWF::SpriteByClassName(const char* class_name) const {
     }
   }
   return NULL;
+}
+
+enum SpecState {
+  kLookingForValue,
+  kLookingForKey
+};
+
+void ParsedSWF::ApplySpec(const char* spec) const {
+  static const char kNewline = '\n';
+  static const char kSingleQuote = '\'';
+  static const char kFalse = 'f';
+  static const char kTrue = 't';
+  static const char kColon = ':';
+  SpecState state = kLookingForValue;
+  bool reading_properties = false;
+  char* c = spec;
+  while (true) {
+    switch (*c) {
+    case kColon:
+      break;
+    }
+    case kNewline:
+      break;
+    }
+
+    case kColon:
+      break;
+    }
+    if (*c == kTab) continue;
+
+    if (state == kLookingForValue) {
+      if (*c == kLeftBrace) {
+        state = kLookingForKey;
+      }
+    }
+    else if (state == kLookingForKey) {
+      if (*c == kLeftBrace) {
+        state = kLookingForKey;
+      }
+    }
+    ++c;
+    ++pos_in_line;
+  }
 }
 
 TinySWFParser::TinySWFParser()

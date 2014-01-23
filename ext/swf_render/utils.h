@@ -31,6 +31,7 @@ RunConfig()
   std::string input_swf;
   std::string output_png;
   std::string class_name;
+  std::string spec;
   int width;
   int height;
   int padding;

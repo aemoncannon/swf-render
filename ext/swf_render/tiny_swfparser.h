@@ -16,6 +16,14 @@ typedef agg::trans_affine Matrix;
 
 Color make_rgba(unsigned v);
 
+struct Modifier {
+  Modifier() : rgba(0), sx(1.0), sy(1.0), visible(true) {}
+  unsigned int rgba;
+  double sx;
+  double sy;
+  bool visible;
+};
+
 class Rect {
  public:
  Rect() : x_min(0), y_min(0), x_max(0), y_max(0) {}
@@ -190,6 +198,18 @@ ColorMatrix() {
   m[18] = 1;
   m[19] = 0;
  }
+  static ColorMatrix WithColor(const Color& c) {
+    ColorMatrix m;
+    // Will zero the components in the transformed color.
+    m[0] = 0;
+    m[6] = 0;
+    m[12] = 0;
+    // Then add the fixed offset.
+    m[4] = c.r;
+    m[9] = c.g;
+    m[14] = c.b;
+    return m;
+  }
   float m[20];
   void transform(Color* c) const {
     int r = m[0]*(float)c->r + m[1]*(float)c->g + m[2]*(float)c->b + m[3]*(float)c->a + m[4];
@@ -228,12 +248,14 @@ class Filter {
 
 class Placement {
  public:
- Placement() : character_id(-1), depth(-1) {}
+ Placement() : character_id(-1), depth(-1), visible(true) {}
   bool operator<(const Placement& other) const { return depth < other.depth; }
+  void ApplyModifier(const Modifier& modifier);
   int character_id;
   int depth;
   std::vector<Filter> filters;
   Matrix matrix;
+  bool visible;
 };
 
 class Sprite {
@@ -257,6 +279,7 @@ class ParsedSWF {
   const Sprite* SpriteByClassName(const char* class_name) const;
   const Sprite* SpriteByCharacterId(int character_id) const;
   const Shape* ShapeByCharacterId(int character_id) const;
+  void ApplySpec(const char* spec);
 
   void Dump() const;
 };

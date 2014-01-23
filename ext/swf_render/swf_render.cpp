@@ -33,6 +33,15 @@ extern "C" VALUE method_render(
   VALUE height,
   VALUE padding);
 
+extern "C" VALUE method_render_spec(
+  VALUE self,
+  VALUE swf_name,
+  VALUE class_name,
+  VALUE spec,
+  VALUE width,
+  VALUE height,
+  VALUE padding);
+
 // Initial setup function, takes no arguments and returns nothing. Some API
 // notes:
 // 
@@ -48,6 +57,7 @@ extern "C" VALUE method_render(
 void Init_swf_render() {
   SWFRender = rb_define_module("SWFRender");
   rb_define_singleton_method(SWFRender, "render", (VALUE(*)(...))method_render, 5);
+  rb_define_singleton_method(SWFRender, "render_spec", (VALUE(*)(...))method_render, 6);
 }
 
 // The business logic -- this is the function we're exposing to Ruby. It returns
@@ -81,3 +91,27 @@ VALUE method_render(
                        &result_size);
   return rb_str_new((char*)result, result_size);
 }
+
+VALUE method_render_spec(
+    VALUE self,
+    VALUE swf_name,
+    VALUE class_name,
+    VALUE spec,
+    VALUE width,
+    VALUE height,
+    VALUE padding) {
+  unsigned char* result;
+  size_t result_size;
+  RunConfig config;
+  config.input_swf = RSTRING_PTR(swf_name);
+  config.class_name = RSTRING_PTR(class_name);
+  config.spec = RSTRING_PTR(spec);
+  config.width = NUM2INT(width);
+  config.height = NUM2INT(height);
+  config.padding = NUM2INT(padding);
+  render_to_png_buffer(config,
+                       &result,
+                       &result_size);
+  return rb_str_new((char*)result, result_size);
+}
+
