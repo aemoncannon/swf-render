@@ -57,7 +57,7 @@ extern "C" VALUE method_render_spec(
 void Init_swf_render() {
   SWFRender = rb_define_module("SWFRender");
   rb_define_singleton_method(SWFRender, "render", (VALUE(*)(...))method_render, 5);
-  rb_define_singleton_method(SWFRender, "render_spec", (VALUE(*)(...))method_render, 6);
+  rb_define_singleton_method(SWFRender, "render_spec", (VALUE(*)(...))method_render_spec, 6);
 }
 
 // The business logic -- this is the function we're exposing to Ruby. It returns
