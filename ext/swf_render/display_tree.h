@@ -1,6 +1,10 @@
 #ifndef _DISPLAYTREE_H
 #define _DISPLAYTREE_H
 
+#include <string>
+#include <vector>
+#include <algorithm>
+
 #include "agg_rendering_buffer.h"
 #include "agg_path_storage.h"
 #include "agg_conv_transform.h"
@@ -124,103 +128,7 @@ namespace agg
         }
 
         // Advance to next simple shape (no groups, no overlapping)
-        bool read_next()
-        {
-          if (m_record_index >= m_shape->records.size()) return false;
-            m_path.remove_all();
-            m_styles.clear();
-            int last_move_x = 0;
-            int last_move_y = 0;
-            int last_fill0 = -1;
-            int last_fill1 = -1;
-            int last_line_style = -1;
-            int fill_style_offset = 0;
-            for (int i = m_record_index; i < m_shape->records.size(); ++i) {
-              const ShapeRecord* record = m_shape->records[i];
-              switch (record->RecordType()) {
-              case ShapeRecord::kStyleChange: {
-                const StyleChangeRecord* sc =
-                    static_cast<const StyleChangeRecord*>(record);
-
-                // This marks the beginning of a new grouping.
-                if (sc->HasNewStyles() && i != m_record_index) {
-                  m_record_index = i;
-                  // We need to draw strokes in order of their line style.
-                  // See: http://wahlers.com.br/claus/blog/hacking-swf-1-shapes-in-flash/
-                  std::sort(m_styles.begin(), m_styles.end());
-                  return true;
-                }
-
-                path_style style;
-                style.path_id = m_path.start_new_path();
-                style.new_styles = sc->HasNewStyles();
-                if (sc->HasNewStyles()) {
-                  m_fill_styles = &sc->fill_styles;
-                  m_line_styles = &sc->line_styles;
-                }
-
-                if (sc->HasFillStyle0()) {
-                  const int f = sc->fill_style0;
-                  last_fill0 = f;
-                  style.left_fill = f;
-                } else {
-                  style.left_fill = last_fill0;
-                }
-
-                if (sc->HasFillStyle1()) {
-                  const int f = sc->fill_style1;
-                  last_fill1 = f;
-                  style.right_fill = f;
-                } else {
-                  style.right_fill = last_fill1;
-                }
-
-                if (sc->HasLineStyle()) {
-                  const int f = sc->line_style;
-                  last_line_style = f;
-                  style.line = f;
-                } else {
-                  style.line = last_line_style;
-                }
-
-                if (sc->HasMoveTo()) {
-                  last_move_x = sc->move_delta_x;
-                  last_move_y = sc->move_delta_y;
-                  m_path.move_to(last_move_x, last_move_y);
-                } else {
-                  m_path.move_to(last_move_x, last_move_y);
-                }
-                m_styles.push_back(style);
-                break;
-              }
-              case ShapeRecord::kCurve: {
-                const CurveRecord* c =
-                    static_cast<const CurveRecord*>(record);
-                last_move_x += c->control_delta_x;
-                last_move_y += c->control_delta_y;
-                m_path.curve3(last_move_x,
-                              last_move_y,
-                              last_move_x + c->anchor_delta_x,
-                              last_move_y + c->anchor_delta_y);
-                last_move_x += c->anchor_delta_x;
-                last_move_y += c->anchor_delta_y;
-                break;
-              }
-              case ShapeRecord::kEdge: {
-                const EdgeRecord* e =
-                    static_cast<const EdgeRecord*>(record);
-                last_move_x += e->delta_x;
-                last_move_y += e->delta_y;
-                m_path.line_to(last_move_x,
-                               last_move_y);
-                break;
-              }
-              }
-            }
-            m_record_index = m_shape->records.size();
-            return true;
-        }
-
+        bool read_next();
 
         unsigned operator [] (unsigned i) const
         {
