@@ -302,121 +302,6 @@ return left_fill < other.left_fill;
   typedef agg::renderer_scanline_aa_solid<renderer_base> renderer_scanline;
   typedef agg::scanline_u8 scanline;
 
-int render_shape(const ParsedSWF& swf,
-                 const Shape& shape,
-                 const Matrix& transform,
-                 const ColorMatrix* color_matrix,
-                 int clip_width, int clip_height,
-                 renderer_base& ren_base,
-                 renderer_scanline& ren) {
-  agg::compound_shape  m_shape;
-  m_shape.set_shape(&shape);
-  m_shape.m_affine = transform;
-  m_shape.m_color_matrix = color_matrix;
-  while (m_shape.read_next()) {
-//    m_shape.scale(clip_width, height);
-    agg::rasterizer_scanline_aa<agg::rasterizer_sl_clip_dbl> ras;
-    agg::rasterizer_compound_aa<agg::rasterizer_sl_clip_dbl> rasc;
-    agg::scanline_u8 sl;
-    agg::scanline_bin sl_bin;
-    Matrix m_scale;
-    agg::conv_transform<agg::compound_shape> shape(m_shape, m_scale);
-    agg::conv_stroke<agg::conv_transform<agg::compound_shape> > stroke(shape);
-    agg::span_allocator<Color> alloc;
-//    m_shape.approximation_scale(m_scale.scale());
-//    printf("Filling shapes.\n");
-    // Fill shape
-    //----------------------
-    rasc.clip_box(0, 0, clip_width, clip_height);
-    rasc.reset();
-    rasc.layer_order(agg::layer_direct);
-    for(int i = 0; i < m_shape.paths(); i++)
-    {
-      rasc.styles(m_shape.style(i).left_fill,
-                  m_shape.style(i).right_fill);
-      rasc.add_path(shape, m_shape.style(i).path_id);
-    }
-    agg::render_scanlines_compound(rasc, sl, sl_bin, ren_base, alloc, m_shape);
-
-    ras.clip_box(0, 0, clip_width, clip_height);
-    for(int i = 0; i < m_shape.paths(); i++) {
-      ras.reset();
-      if(m_shape.style(i).line >= 0) {
-        const LineStyle& style = m_shape.line_style(m_shape.style(i).line);
-        if (style.width == 0) continue;
-        const double width = (double)style.width * m_shape.m_affine.scale();
-        stroke.width(width);
-        switch (style.join_style) {
-          case LineStyle::kJoinBevel:
-            stroke.line_join(agg::bevel_join);
-            break;
-          case LineStyle::kJoinMiter:
-            stroke.line_join(agg::miter_join);
-            if (style.miter_limit_factor > 0) {
-              stroke.miter_limit(style.miter_limit_factor);
-            }
-            break;
-          case LineStyle::kJoinRound:  // Fall through
-          default:
-            stroke.line_join(agg::round_join);
-            break;
-        }
-        switch (style.start_cap_style) {
-          case LineStyle::kCapRound:
-            stroke.line_cap(agg::round_cap);
-            break;
-          case LineStyle::kCapSquare:
-            stroke.line_cap(agg::square_cap);
-            break;
-          case LineStyle::kCapNone:  // Fall through
-          default:
-            stroke.line_cap(agg::butt_cap);
-            break;
-        }
-        Color c = make_rgba(style.rgba);
-        if (color_matrix) {
-          color_matrix->transform(&c);
-        }
-        ren.color(c);
-        ras.add_path(stroke, m_shape.style(i).path_id);
-        agg::render_scanlines(ras, sl, ren);
-      }
-    }
-  }
-  return 0;
-}
-
-int render_sprite(const ParsedSWF& swf,
-                  const Sprite& sprite,
-                  const Matrix& transform,
-                  const ColorMatrix* color_matrix,
-                  int clip_width,
-                  int clip_height,
-                  renderer_base& ren_base,
-                  renderer_scanline& ren) {
-  for (std::vector<Placement>::const_iterator it =
-         sprite.placements.begin(); it != sprite.placements.end(); ++it) {
-    const Placement& placement = *it;
-    Matrix m(transform);
-    m.premultiply(placement.matrix);
-    const ColorMatrix* color_m = color_matrix;
-    if (placement.filters.size()) {
-      for (std::vector<Filter>::const_iterator it =
-             placement.filters.begin(); it != placement.filters.end(); ++it) {
-        if (it->filter_type == Filter::kFilterColorMatrix) {
-          color_m = &it->color_matrix;
-        }
-      }
-    }
-    if (const Sprite* sprite = swf.SpriteByCharacterId(placement.character_id)) {
-      render_sprite(swf, *sprite, m, color_m, clip_width, clip_height, ren_base, ren);
-    }
-    if (const Shape* shape = swf.ShapeByCharacterId(placement.character_id)) {
-      render_shape(swf, *shape, m, color_m, clip_width, clip_height, ren_base, ren);
-    }
-  }
-  return 0;
-}
 
 void get_bounds(const ParsedSWF& swf,
                 const Shape& shape,
@@ -476,9 +361,6 @@ void get_bounds(const ParsedSWF& swf,
 int render_to_buffer(const RunConfig& c, unsigned char* buf) {
   TinySWFParser parser;
   ParsedSWF* swf = parser.parse(c.input_swf.c_str());
-  if (c.spec.size()) {
-    swf->ApplySpec(c.spec.c_str());
-  }
   //swf->Dump();
   assert(swf);
 
@@ -490,7 +372,6 @@ int render_to_buffer(const RunConfig& c, unsigned char* buf) {
   renderer_scanline ren(ren_base);
   const double pad = c.padding;
   if (const Sprite* sprite = swf->SpriteByClassName(c.class_name.c_str())) {
-
     double x1 = 0;
     double x2 = 0;
     double y1 = 0;
@@ -505,8 +386,12 @@ int render_to_buffer(const RunConfig& c, unsigned char* buf) {
     vp.world_viewport(x1-p, y1-p, x2+p, y2+p);
     vp.device_viewport(0, 0, c.width, c.height);
     const Matrix view_transform = vp.to_affine();
+    DisplayTree* tree = DisplayTree::Build(*swf, *sprite);
+    if (c.spec.size()) {
+      tree->ApplySpec(c.spec.c_str());
+    }
+    tree->Render(view_transform, NULL, c.width, c.height, ren_base, ren);
 
-    render_sprite(*swf, *sprite, view_transform, NULL, c.width, c.height, ren_base, ren);
   } else {
     assert(swf->shapes.size());
     double x1 = 0;
@@ -520,10 +405,9 @@ int render_to_buffer(const RunConfig& c, unsigned char* buf) {
     vp.world_viewport(x1 - pad, y1 - pad, x2 + pad, y2 + pad);
     vp.device_viewport(0, 0, c.width, c.height);
     const Matrix view_transform = vp.to_affine();
-
     for (std::vector<Shape>::const_iterator it = swf->shapes.begin();
          it != swf->shapes.end(); ++it) {
-      render_shape(*swf, *it, view_transform, NULL, c.width, c.height, ren_base, ren);
+      DisplayTree::RenderShape(*it, view_transform, NULL, c.width, c.height, ren_base, ren);
     }
   }
   return 0;

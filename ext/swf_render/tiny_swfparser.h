@@ -1,3 +1,6 @@
+#ifndef _TINYSWFPARSER_H
+#define _TINYSWFPARSER_H
+
 #include "tiny_common.h"
 #include "tiny_SWFStream.h"
 #include "agg_trans_affine.h"
@@ -7,22 +10,10 @@
 #include <map>
 #include <assert.h>
 
-
-#ifndef _TINYSWFPARSER_H
-#define _TINYSWFPARSER_H
-
 typedef agg::rgba8 Color;
 typedef agg::trans_affine Matrix;
 
 Color make_rgba(unsigned v);
-
-struct Modifier {
-  Modifier() : rgba(0), sx(1.0), sy(1.0), visible(true) {}
-  unsigned int rgba;
-  double sx;
-  double sy;
-  bool visible;
-};
 
 class Rect {
  public:
@@ -250,12 +241,10 @@ class Placement {
  public:
  Placement() : character_id(-1), depth(-1), visible(true) {}
   bool operator<(const Placement& other) const { return depth < other.depth; }
-  void ApplyModifier(const Modifier& modifier);
   int character_id;
   int depth;
   std::vector<Filter> filters;
   Matrix matrix;
-  bool visible;
 };
 
 class Sprite {
@@ -279,7 +268,6 @@ class ParsedSWF {
   const Sprite* SpriteByClassName(const char* class_name) const;
   const Sprite* SpriteByCharacterId(int character_id) const;
   const Shape* ShapeByCharacterId(int character_id) const;
-  void ApplySpec(const char* spec);
 
   void Dump() const;
 };
