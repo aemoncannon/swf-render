@@ -416,7 +416,7 @@ void TinySWFParser::HandlePlaceObject23(Tag* tag, Sprite* sprite, int current_fr
           Ratio = getUI16();
         }
         if (PlaceFlagHasName) {
-          const char* name = getSTRING();
+          placement.name = getSTRING();
         }
         if (PlaceFlagHasClipDepth) {
           printf("Warning: unhandled clipping mask.\n");

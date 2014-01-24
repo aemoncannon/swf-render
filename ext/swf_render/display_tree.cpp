@@ -1,37 +1,25 @@
 #include "display_tree.h"
-
-#include "agg_rendering_buffer.h"
-#include "agg_path_storage.h"
-#include "agg_conv_transform.h"
-#include "agg_conv_curve.h"
-#include "agg_conv_stroke.h"
-#include "agg_gsv_text.h"
-#include "agg_scanline_u.h"
-#include "agg_scanline_bin.h"
-#include "agg_renderer_scanline.h"
-#include "agg_rasterizer_scanline_aa.h"
-#include "agg_rasterizer_compound_aa.h"
-#include "agg_span_allocator.h"
-#include "agg_pixfmt_rgba.h"
-#include "agg_bounding_rect.h"
+#include <cstdlib>
 
 namespace {
 
-DisplayTree* Build(
+void BuildTree(
     const ParsedSWF& swf,
     const Sprite& sprite,
     DisplayTree* tree) {
   for (std::vector<Placement>::const_iterator it =
          sprite.placements.begin(); it != sprite.placements.end(); ++it) {
-    DisplayTree* child = new DisplayTree();
     const Placement& placement = *it;
+    DisplayTree* child = new DisplayTree();
     child->placement = &placement;
+    child->name = placement.name;
     if (const Sprite* sprite = swf.SpriteByCharacterId(placement.character_id)) {
-      Build(swf, *sprite, *child);
+      BuildTree(swf, *sprite, child);
     }
     else if (const Shape* shape = swf.ShapeByCharacterId(placement.character_id)) {
-      tree->shape = shape;
+      child->shape = shape;
     }
+    tree->children.push_back(child);
   }
 }
 
@@ -41,27 +29,38 @@ DisplayTree* DisplayTree::Build(
     const ParsedSWF& swf,
     const Sprite& sprite) {
   DisplayTree* tree = new DisplayTree();
-  Build(swf, sprite, tree);
+  BuildTree(swf, sprite, tree);
   return tree;
 }
 
-static const char kNewline = '\n';
-static const char kSingleQuote = '\'';
-static const char kFalse = 'f';
-static const char kTrue = 't';
-static const char kColon = ':';
-static const char kDot = '.';
-
-enum SpecState {
-  kAtStart,
-  kOther
-};
+void DisplayTree::GetBounds(
+    const Matrix& transform,
+    double* x_min_out,
+    double* x_max_out,
+    double* y_min_out,
+    double* y_max_out) const {
+  if (!visible) return;
+  Matrix m(transform);
+  if (placement) {
+    m.premultiply(placement->matrix);
+  }
+  m.premultiply(matrix);
+  if (shape) {
+    GetShapeBounds(*shape, m, x_min_out, x_max_out, y_min_out, y_max_out);
+  }
+  for (std::vector<DisplayTree*>::const_iterator it =
+         children.begin(); it != children.end(); ++it) {
+    (*it)->GetBounds(m, x_min_out, x_max_out, y_min_out, y_max_out);
+  }
+}
 
 const ColorMatrix* DisplayTree::GetColorMatrix() const {
-  for (std::vector<Filter>::const_iterator it =
-         placement.filters.begin(); it != placement.filters.end(); ++it) {
-    if (it->filter_type == Filter::kFilterColorMatrix) {
-      return &it->color_matrix;
+  if (placement) {
+    for (std::vector<Filter>::const_iterator it =
+           placement->filters.begin(); it != placement->filters.end(); ++it) {
+      if (it->filter_type == Filter::kFilterColorMatrix) {
+        return &it->color_matrix;
+      }
     }
   }
   for (std::vector<Filter>::const_iterator it =
@@ -82,32 +81,63 @@ int DisplayTree::Render(
     renderer_base& ren_base,
     renderer_scanline& ren) const {
 
-  if (!visible) return;
+  if (!visible) return 0;
   Matrix m(transform);
+  if (placement) {
+    m.premultiply(placement->matrix);
+  }
   m.premultiply(matrix);
-  m.premultiply(placement->matrix);
-
-  const ColorMatrix* color_m = GetColorMatrix();
-  if (color_matrix) {
+  const ColorMatrix* color_m = color_matrix;
+  if (const ColorMatrix* cm = GetColorMatrix()) {
     // We don't currently support multiplying color matrices.
     assert(color_m == NULL);
+    color_m = cm;
   }
   if (shape) {
     RenderShape(*shape, m, color_m, clip_width, clip_height, ren_base, ren);
   }
-  for (std::vector<const DisplayTree*>::const_iterator it =
+  for (std::vector<DisplayTree*>::const_iterator it =
          children.begin(); it != children.end(); ++it) {
-    it->Render(m, color_m, clip_width, clip_height, ren_base, ren);
+    (*it)->Render(m, color_m, clip_width, clip_height, ren_base, ren);
   }
   return 0;
 }
 
-typedef agg::pixfmt_rgba32_plain pixfmt;
-typedef agg::renderer_base<pixfmt> renderer_base;
-typedef agg::renderer_scanline_aa_solid<renderer_base> renderer_scanline;
-typedef agg::scanline_u8 scanline;
+void DisplayTree::GetShapeBounds(
+    const Shape& shape,
+    const Matrix& transform,
+    double* x_min_out,
+    double* x_max_out,
+    double* y_min_out,
+    double* y_max_out) {
+  const Rect& r = shape.shape_bounds;
+  double x_min = r.x_min;
+  double x_max = r.x_max;
+  double y_min = r.y_min;
+  double y_max = r.y_max;
+  if (shape.edge_bounds.is_valid()) {
+    x_min = std::min(x_min, (double)shape.edge_bounds.x_min);
+    y_min = std::min(y_min, (double)shape.edge_bounds.y_min);
+    x_max = std::max(x_max, (double)shape.edge_bounds.x_max);
+    y_max = std::max(y_max, (double)shape.edge_bounds.y_max);
+  }
+  transform.transform(&x_min, &y_min);
+  transform.transform(&x_max, &y_max);
+  if (*x_min_out == 0 && *x_max_out == 0 &&
+      *y_min_out == 0 && *y_max_out == 0) {
+    *x_min_out = x_min;
+    *x_max_out = x_max;
+    *y_min_out = y_min;
+    *y_max_out = y_max;
+  } else {
+    *x_min_out = std::min(x_min, *x_min_out);
+    *x_max_out = std::max(x_max, *x_max_out);
+    *y_min_out = std::min(y_min, *y_min_out);
+    *y_max_out = std::max(y_max, *y_max_out);
+  }
+}
 
-static int DisplayTree::RenderShape(
+int DisplayTree::RenderShape(
     const Shape& shape,
     const Matrix& transform,
     const ColorMatrix* color_matrix,
@@ -191,10 +221,23 @@ static int DisplayTree::RenderShape(
   return 0;  
 }
 
+static const char kNewline = '\n';
+static const char kSingleQuote = '\'';
+static const char kFalse = 'f';
+static const char kTrue = 't';
+static const char kColon = ':';
+static const char kDot = '.';
+static const char kEquals = '=';
+
+enum SpecState {
+  kAtStart,
+  kOther
+};
+
 DisplayTree* DisplayTree::ChildByName(const char* name) {
   for (std::vector<DisplayTree*>::const_iterator it =
          children.begin(); it != children.end(); ++it) {
-    const DisplayTree* child = *it;
+    DisplayTree* child = *it;
     if (child->name == name) {
       return child;
     }
@@ -203,15 +246,17 @@ DisplayTree* DisplayTree::ChildByName(const char* name) {
 }
 
 DisplayTree* DisplayTree::DescendantByPath(const char* path) {
-  char* c = path;
-  const char* name[200];
+  const char* c = path;
+  char name[200];
   char* n = name;
-  Placement* p = NULL;
+  DisplayTree* p = NULL;
   while (*c) {
     if (*c == kDot || *c == kNewline) {
       *n = '\0';
       p = ChildByName(name);
       return *c == kNewline ? p : p->DescendantByPath(c + 1);
+    } else {
+      *n = *c;
     }
     ++n;
     ++c;
@@ -219,35 +264,73 @@ DisplayTree* DisplayTree::DescendantByPath(const char* path) {
   return NULL;
 }
 
-void ApplyProperty(const char* property, DisplayTree* target) {
-  char* c = property;
-  while (*c && *c != kNewline) {
-    ++c;
-  }
-  target->matrix.scale(mod.sx, mod.sy);
-  target->visible = mod.visible;
+void DisplayTree::SetColor(const Color& color) {
   Filter filter;
-  filter.filter_type = kFilterColorMatrix;
-  filter.color_matrix = ColorMatrix::WithColor(make_rgba(mod.rgba));
-  target->filters.push_back(filter);
+  filter.filter_type = Filter::kFilterColorMatrix;
+  filter.color_matrix = ColorMatrix::WithColor(color);
+  filters.push_back(filter);
 }
 
-void DisplayTree::ApplySpec(const char* spec) const {
+void ApplyProperty(const char* property, DisplayTree* target) {
+  const char* c = property;
+  char key[100];
+  char value[100];
+  char* n = key;
+  while (*c && *c != kNewline) {
+    if (*c == kEquals) {
+      *n = '\0';
+      n = value;
+    } else {
+      *n = *c;
+      ++n;
+    }
+    ++c;
+  }
+  *n = '\0';
+
+  double sx = 1.0;
+  double sy = 1.0;
+  if (strcmp(key, "v") == 0) {
+    target->visible = value[0] == 't';
+  }
+  else if (strcmp(key, "c") == 0) {
+    char* v = value;
+    v += 3; // Go past '0x
+    char * p;
+    const unsigned n = strtoul(v, &p, 16);
+    assert(*p == '\'');
+    Color color((n >> 16) & 0xFF,
+                (n >> 8) & 0xFF,
+                n & 0xFF,
+                0xFF);
+    target->SetColor(color);
+  }
+  else if (strcmp(key, "sx") == 0) {
+    char * p;
+    sx = strtod(value, &p);
+  }
+  else if (strcmp(key, "sy") == 0) {
+    char * p;
+    sy = strtod(value, &p);
+  }
+  target->matrix.scale(sx, sy);
+}
+
+void DisplayTree::ApplySpec(const char* spec) {
   SpecState state = kAtStart;
-  Modifier modifier;
   DisplayTree* target = NULL;
-  char* c = spec;
+  const char* c = spec;
   while (*c) {
     if (state == kAtStart) {
       if (*c == kColon) {
-        placement = DescendantByPath(c + 1);
-      } else if (placement) {
-        ApplyProperty(c, placement);
+        target = DescendantByPath(c + 1);
+      } else if (target) {
+        ApplyProperty(c, target);
       }
       state = kOther;
     }
     if (*c == kNewline) {
-      state = kStart;
+      state = kAtStart;
     }
     ++c;
   }

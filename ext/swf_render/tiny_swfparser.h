@@ -192,13 +192,13 @@ ColorMatrix() {
   static ColorMatrix WithColor(const Color& c) {
     ColorMatrix m;
     // Will zero the components in the transformed color.
-    m[0] = 0;
-    m[6] = 0;
-    m[12] = 0;
+    m.m[0] = 0;
+    m.m[6] = 0;
+    m.m[12] = 0;
     // Then add the fixed offset.
-    m[4] = c.r;
-    m[9] = c.g;
-    m[14] = c.b;
+    m.m[4] = c.r;
+    m.m[9] = c.g;
+    m.m[14] = c.b;
     return m;
   }
   float m[20];
@@ -239,12 +239,13 @@ class Filter {
 
 class Placement {
  public:
- Placement() : character_id(-1), depth(-1), visible(true) {}
+ Placement() : character_id(-1), depth(-1) {}
   bool operator<(const Placement& other) const { return depth < other.depth; }
   int character_id;
   int depth;
   std::vector<Filter> filters;
   Matrix matrix;
+  std::string name;
 };
 
 class Sprite {
