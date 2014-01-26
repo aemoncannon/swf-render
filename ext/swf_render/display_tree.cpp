@@ -393,6 +393,7 @@ void ApplyProperty(const char* property, DisplayTree* target) {
 
   double sx = 1.0;
   double sy = 1.0;
+  double r = 0;
   if (strcmp(key, "v") == 0) {
     target->visible = value[0] == 't';
   }
@@ -416,7 +417,16 @@ void ApplyProperty(const char* property, DisplayTree* target) {
     char * p;
     sy = strtod(value, &p);
   }
-  target->matrix.scale(sx, sy);
+  else if (strcmp(key, "r") == 0) {
+    char * p;
+    r = strtod(value, &p);
+  }
+  if (sx != 1.0 || sy != 1.0) {
+    target->matrix.scale(sx, sy);
+  }
+  if (r != 0) {
+    target->matrix.rotate(r);
+  }
 }
 
 void DisplayTree::ApplySpec(const char* spec) {
