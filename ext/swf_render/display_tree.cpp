@@ -1,5 +1,6 @@
 #include "display_tree.h"
 #include <cstdlib>
+#include <stdio.h>
 
 namespace {
 
@@ -357,7 +358,12 @@ DisplayTree* DisplayTree::DescendantByPath(const char* path) {
     if (*c == kDot || *c == kNewline) {
       *n = '\0';
       p = ChildByName(name);
-      return *c == kNewline ? p : p->DescendantByPath(c + 1);
+      if (p == NULL) {
+        fprintf(stderr, "No child instance with name %s.", name);
+        return NULL;
+      } else {
+        return *c == kNewline ? p : p->DescendantByPath(c + 1);
+      }
     } else {
       *n = *c;
     }
