@@ -380,13 +380,15 @@ struct Modifier {
       r(0.0),
       rgb(0),
       a(1.0),
-      v(true) {}
+      v(true),
+      has_color(false) {}
   double sx;
   double sy;
   double r;
   unsigned rgb;
   double a;
   bool v;
+  bool has_color;
 };
 
 void DisplayTree::SetColor(const Color& color) {
@@ -397,14 +399,16 @@ void DisplayTree::SetColor(const Color& color) {
 }
 
 void ApplyModifier(const Modifier& mod, DisplayTree* target) {
-  Color color((mod.rgb >> 16) & 0xFF,
-              (mod.rgb >> 8) & 0xFF,
-              (mod.rgb & 0xFF),
-              0xFF);
-  if (mod.a != 1.0) {
-    color.opacity(mod.a);
+  if (mod.has_color) {
+    Color color((mod.rgb >> 16) & 0xFF,
+                (mod.rgb >> 8) & 0xFF,
+                (mod.rgb & 0xFF),
+                0xFF);
+    if (mod.a != 1.0) {
+      color.opacity(mod.a);
+    }
+    target->SetColor(color);
   }
-  target->SetColor(color);
   if (mod.r != 0) {
     target->matrix.rotate(mod.r);
   }
@@ -438,6 +442,7 @@ void ParseProperty(const char* property, Modifier* modifier) {
     v += 3; // Go past '0x
     char * p;
     modifier->rgb = strtoul(v, &p, 16);
+    modifier->has_color = true;
 
   } else if (strcmp(key, "sx") == 0) {
     char * p;
