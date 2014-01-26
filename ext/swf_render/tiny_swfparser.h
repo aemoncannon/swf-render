@@ -195,10 +195,12 @@ ColorMatrix() {
     m.m[0] = 0;
     m.m[6] = 0;
     m.m[12] = 0;
+    m.m[18] = 0;
     // Then add the fixed offset.
     m.m[4] = c.r;
     m.m[9] = c.g;
     m.m[14] = c.b;
+    m.m[19] = c.a;
     return m;
   }
   float m[20];

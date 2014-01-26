@@ -373,6 +373,22 @@ DisplayTree* DisplayTree::DescendantByPath(const char* path) {
   return NULL;
 }
 
+struct Modifier {
+  Modifier()
+    : sx(1.0),
+      sy(1.0),
+      r(0.0),
+      rgb(0),
+      a(1.0),
+      v(true) {}
+  double sx;
+  double sy;
+  double r;
+  unsigned rgb;
+  double a;
+  bool v;
+};
+
 void DisplayTree::SetColor(const Color& color) {
   Filter filter;
   filter.filter_type = Filter::kFilterColorMatrix;
@@ -380,7 +396,25 @@ void DisplayTree::SetColor(const Color& color) {
   filters.push_back(filter);
 }
 
-void ApplyProperty(const char* property, DisplayTree* target) {
+void ApplyModifier(const Modifier& mod, DisplayTree* target) {
+  Color color((mod.rgb >> 16) & 0xFF,
+              (mod.rgb >> 8) & 0xFF,
+              (mod.rgb & 0xFF),
+              0xFF);
+  if (mod.a != 1.0) {
+    color.opacity(mod.a);
+  }
+  target->SetColor(color);
+  if (mod.r != 0) {
+    target->matrix.rotate(mod.r);
+  }
+  if (mod.sx != 1.0 || mod.sy != 1.0) {
+    target->matrix.scale(mod.sx, mod.sy);
+  }
+  target->visible = mod.v;
+}
+
+void ParseProperty(const char* property, Modifier* modifier) {
   const char* c = property;
   char key[100];
   char value[100];
@@ -396,55 +430,51 @@ void ApplyProperty(const char* property, DisplayTree* target) {
     ++c;
   }
   *n = '\0';
-
-  double sx = 1.0;
-  double sy = 1.0;
-  double r = 0;
   if (strcmp(key, "v") == 0) {
-    target->visible = value[0] == 't';
+    modifier->v = value[0] == 't';
   }
   else if (strcmp(key, "c") == 0) {
     char* v = value;
     v += 3; // Go past '0x
     char * p;
-    const unsigned n = strtoul(v, &p, 16);
-    assert(*p == '\'');
-    Color color((n >> 16) & 0xFF,
-                (n >> 8) & 0xFF,
-                n & 0xFF,
-                0xFF);
-    target->SetColor(color);
-  }
-  else if (strcmp(key, "sx") == 0) {
+    modifier->rgb = strtoul(v, &p, 16);
+
+  } else if (strcmp(key, "sx") == 0) {
     char * p;
-    sx = strtod(value, &p);
-  }
-  else if (strcmp(key, "sy") == 0) {
+    modifier->sx = strtod(value, &p);
+
+  } else if (strcmp(key, "sy") == 0) {
     char * p;
-    sy = strtod(value, &p);
-  }
-  else if (strcmp(key, "r") == 0) {
+    modifier->sy = strtod(value, &p);
+
+  } else if (strcmp(key, "r") == 0) {
     char * p;
-    r = strtod(value, &p);
-  }
-  if (sx != 1.0 || sy != 1.0) {
-    target->matrix.scale(sx, sy);
-  }
-  if (r != 0) {
-    target->matrix.rotate(r);
+    modifier->r = strtod(value, &p);
+
+  } else if (strcmp(key, "a") == 0) {
+    char * p;
+    modifier->a = strtod(value, &p);
   }
 }
 
 void DisplayTree::ApplySpec(const char* spec) {
   SpecState state = kAtStart;
   DisplayTree* target = NULL;
+  Modifier modifier;
   const char* c = spec;
+  int num_props = 0;
   while (*c) {
     if (state == kAtStart) {
       if (*c == kColon) {
+        if (target && num_props) {
+          ApplyModifier(modifier, target);
+        }
         target = DescendantByPath(c + 1);
+        modifier = Modifier();
+        num_props = 0;
       } else if (target) {
-        ApplyProperty(c, target);
+        ParseProperty(c, &modifier);
+        num_props++;
       }
       state = kOther;
     }
@@ -452,6 +482,9 @@ void DisplayTree::ApplySpec(const char* spec) {
       state = kAtStart;
     }
     ++c;
+  }
+  if (target && num_props) {
+    ApplyModifier(modifier, target);
   }
 }
 
