@@ -444,6 +444,11 @@ void ParseProperty(const char* property, Modifier* modifier) {
     modifier->rgb = strtoul(v, &p, 16);
     modifier->has_color = true;
 
+  } else if (strcmp(key, "s") == 0) {
+    char * p;
+    modifier->sx = strtod(value, &p);
+    modifier->sy = modifier->sx;
+
   } else if (strcmp(key, "sx") == 0) {
     char * p;
     modifier->sx = strtod(value, &p);
