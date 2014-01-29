@@ -205,7 +205,8 @@ public:
 
   const ColorMatrix* GetColorMatrix() const;
 
-  void SetColor(const Color& color);
+  void SetColor(unsigned r, unsigned g, unsigned b);
+  void SetColor(unsigned r, unsigned g, unsigned b, double alpha);
 
   void GetBounds(
       const Matrix& transform,

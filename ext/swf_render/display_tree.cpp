@@ -381,7 +381,8 @@ struct Modifier {
       rgb(0),
       a(1.0),
       v(true),
-      has_color(false) {}
+      has_color(false),
+      has_alpha(false){}
   double sx;
   double sy;
   double r;
@@ -389,25 +390,33 @@ struct Modifier {
   double a;
   bool v;
   bool has_color;
+  bool has_alpha;
 };
 
-void DisplayTree::SetColor(const Color& color) {
+void DisplayTree::SetColor(unsigned r, unsigned g, unsigned b) {
   Filter filter;
   filter.filter_type = Filter::kFilterColorMatrix;
-  filter.color_matrix = ColorMatrix::WithColor(color);
+  filter.color_matrix = ColorMatrix::WithColor(r, g, b);
+  filters.push_back(filter);
+}
+
+void DisplayTree::SetColor(unsigned r, unsigned g, unsigned b, double alpha) {
+  Filter filter;
+  filter.filter_type = Filter::kFilterColorMatrix;
+  filter.color_matrix = ColorMatrix::WithColorAndAlpha(r, g, b, alpha);
   filters.push_back(filter);
 }
 
 void ApplyModifier(const Modifier& mod, DisplayTree* target) {
   if (mod.has_color) {
-    Color color((mod.rgb >> 16) & 0xFF,
-                (mod.rgb >> 8) & 0xFF,
-                (mod.rgb & 0xFF),
-                0xFF);
-    if (mod.a != 1.0) {
-      color.opacity(mod.a);
+    unsigned r = (mod.rgb >> 16) & 0xFF; 
+    unsigned g = (mod.rgb >> 8) & 0xFF;
+    unsigned b = (mod.rgb & 0xFF);
+    if (mod.has_alpha) {
+      target->SetColor(r, g, b, mod.a);
+    } else {
+      target->SetColor(r, g, b);
     }
-    target->SetColor(color);
   }
   if (mod.r != 0) {
     target->matrix.rotate(mod.r);
@@ -464,6 +473,7 @@ void ParseProperty(const char* property, Modifier* modifier) {
   } else if (strcmp(key, "a") == 0) {
     char * p;
     modifier->a = strtod(value, &p);
+    modifier->has_alpha = true;
   }
 }
 

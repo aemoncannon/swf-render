@@ -189,7 +189,19 @@ ColorMatrix() {
   m[18] = 1;
   m[19] = 0;
  }
-  static ColorMatrix WithColor(const Color& c) {
+  static ColorMatrix WithColor(unsigned r, unsigned g, unsigned b) {
+    ColorMatrix m;
+    // Will zero the components in the transformed color.
+    m.m[0] = 0;
+    m.m[6] = 0;
+    m.m[12] = 0;
+    // Then add the fixed offset.
+    m.m[4] = r;
+    m.m[9] = g;
+    m.m[14] = b;
+    return m;
+  }
+  static ColorMatrix WithColorAndAlpha(unsigned r, unsigned g, unsigned b, double a) {
     ColorMatrix m;
     // Will zero the components in the transformed color.
     m.m[0] = 0;
@@ -197,10 +209,10 @@ ColorMatrix() {
     m.m[12] = 0;
     m.m[18] = 0;
     // Then add the fixed offset.
-    m.m[4] = c.r;
-    m.m[9] = c.g;
-    m.m[14] = c.b;
-    m.m[19] = c.a;
+    m.m[4] = r;
+    m.m[9] = g;
+    m.m[14] = b;
+    m.m[19] = std::max(std::min(1.0, 255.0 * a), 0.0);
     return m;
   }
   float m[20];
