@@ -283,7 +283,9 @@ int DisplayTree::RenderShape(
       if(m_shape.style(i).line >= 0) {
         const LineStyle& style = m_shape.line_style(m_shape.style(i).line);
         if (style.width == 0) continue;
-        const double width = (double)style.width * m_shape.m_affine.scale();
+        // Special handling for 'hairline' strokes that should be scale invariant.
+        const double width = style.width == 1 ? 
+            1.0 : (double)style.width * m_shape.m_affine.scale();
         stroke.width(width);
         switch (style.join_style) {
           case LineStyle::kJoinBevel:
