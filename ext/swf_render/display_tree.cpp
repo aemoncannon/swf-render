@@ -234,10 +234,10 @@ void DisplayTree::GetShapeBounds(
     *y_min_out = y_min;
     *y_max_out = y_max;
   } else {
-    *x_min_out = std::min(x_min, *x_min_out);
-    *x_max_out = std::max(x_max, *x_max_out);
-    *y_min_out = std::min(y_min, *y_min_out);
-    *y_max_out = std::max(y_max, *y_max_out);
+    *x_min_out = std::min(x_max, std::min(x_min, *x_min_out));
+    *x_max_out = std::max(x_min, std::max(x_max, *x_max_out));
+    *y_min_out = std::min(y_max, std::min(y_min, *y_min_out));
+    *y_max_out = std::max(y_min, std::max(y_max, *y_max_out));
   }
 }
 
