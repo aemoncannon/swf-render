@@ -212,7 +212,7 @@ ColorMatrix() {
     m.m[4] = r;
     m.m[9] = g;
     m.m[14] = b;
-    m.m[19] = std::max(std::min(1.0, 255.0 * a), 0.0);
+    m.m[19] = (unsigned)(255.0 * a);
     return m;
   }
   float m[20];
