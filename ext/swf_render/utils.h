@@ -23,8 +23,7 @@
 #define _UTILS_H
 
 struct RunConfig {
-RunConfig()
-: output_png("out.png"),
+  RunConfig() : output_png("out.png"),
   width(200),
   height(200),
   padding(0) {}
@@ -35,6 +34,14 @@ RunConfig()
   int width;
   int height;
   int padding;
+};
+
+struct Result {
+  Result() : data(NULL), size(0), origin_x(0), origin_y(0) {}
+  unsigned char* data;
+  size_t size;
+  int origin_x;
+  int origin_y;
 };
 
 #endif

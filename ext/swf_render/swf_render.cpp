@@ -23,7 +23,6 @@
 // Allocate two VALUE variables to hold the modules we'll create. Ruby values
 // are all of type VALUE. Qnil is the C representation of Ruby's nil.
 extern "C" VALUE SWFRender = Qnil;
-
 extern "C" void Init_swf_render();
 extern "C" VALUE method_render(
   VALUE self,
@@ -42,6 +41,33 @@ extern "C" VALUE method_render_spec(
   VALUE height,
   VALUE padding);
 
+
+extern "C" VALUE ResultClass = Qnil;
+
+static void Result_free(void *s) {
+  xfree(s);
+}
+static VALUE Result_get_size(VALUE r) {
+  struct Result *result;
+  Data_Get_Struct(r, struct Result, result);
+  return INT2NUM(result->size);
+}
+static VALUE Result_get_origin_x(VALUE r) {
+  struct Result *result;
+  Data_Get_Struct(r, struct Result, result);
+  return INT2NUM(result->origin_x);
+}
+static VALUE Result_get_origin_y(VALUE r) {
+  struct Result *result;
+  Data_Get_Struct(r, struct Result, result);
+  return INT2NUM(result->origin_y);
+}
+static VALUE Result_get_data(VALUE r) {
+  struct Result *result;
+  Data_Get_Struct(r, struct Result, result);
+  return rb_str_new((char*)result->data, result->size);
+}
+
 // Initial setup function, takes no arguments and returns nothing. Some API
 // notes:
 // 
@@ -55,9 +81,16 @@ extern "C" VALUE method_render_spec(
 //   single method on the given module
 // 
 void Init_swf_render() {
+
   SWFRender = rb_define_module("SWFRender");
   rb_define_singleton_method(SWFRender, "render", (VALUE(*)(...))method_render, 5);
   rb_define_singleton_method(SWFRender, "render_spec", (VALUE(*)(...))method_render_spec, 6);
+
+  ResultClass = rb_define_class_under(SWFRender, "Result", rb_cObject);
+  rb_define_method(ResultClass, "get_size", (VALUE(*)(...))Result_get_size, 0);
+  rb_define_method(ResultClass, "get_origin_x", (VALUE(*)(...))Result_get_origin_x, 0);
+  rb_define_method(ResultClass, "get_origin_y", (VALUE(*)(...))Result_get_origin_y, 0);
+  rb_define_method(ResultClass, "get_data", (VALUE(*)(...))Result_get_data, 0);
 }
 
 // The business logic -- this is the function we're exposing to Ruby. It returns
@@ -78,18 +111,16 @@ VALUE method_render(
     VALUE width,
     VALUE height,
     VALUE padding) {
-  unsigned char* result;
-  size_t result_size;
+  struct Result* result;
+  result = ALLOC(struct Result);
   RunConfig config;
   config.input_swf = RSTRING_PTR(swf_name);
   config.class_name = RSTRING_PTR(class_name);
   config.width = NUM2INT(width);
   config.height = NUM2INT(height);
   config.padding = NUM2INT(padding);
-  render_to_png_buffer(config,
-                       &result,
-                       &result_size);
-  return rb_str_new((char*)result, result_size);
+  render_to_png_buffer(config, result);
+  return Data_Wrap_Struct(ResultClass, NULL, Result_free, result);
 }
 
 VALUE method_render_spec(
@@ -100,8 +131,8 @@ VALUE method_render_spec(
     VALUE width,
     VALUE height,
     VALUE padding) {
-  unsigned char* result;
-  size_t result_size;
+  struct Result* result;
+  result = ALLOC(struct Result);
   RunConfig config;
   config.input_swf = RSTRING_PTR(swf_name);
   config.class_name = RSTRING_PTR(class_name);
@@ -109,9 +140,7 @@ VALUE method_render_spec(
   config.width = NUM2INT(width);
   config.height = NUM2INT(height);
   config.padding = NUM2INT(padding);
-  render_to_png_buffer(config,
-                       &result,
-                       &result_size);
-  return rb_str_new((char*)result, result_size);
+  render_to_png_buffer(config, result);
+  return Data_Wrap_Struct(ResultClass, NULL, Result_free, result);
 }
 

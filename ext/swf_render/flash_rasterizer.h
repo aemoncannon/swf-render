@@ -24,10 +24,9 @@
 #include <stdlib.h>
 
 struct RunConfig;
+struct Result;
 
 int render_to_png_file(const RunConfig& c);
-int render_to_png_buffer(const RunConfig& c,
-                         unsigned char** out,
-                         size_t* outsize);
+int render_to_png_buffer(const RunConfig& c, Result* result);
 
 #endif

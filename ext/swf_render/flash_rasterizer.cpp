@@ -120,12 +120,10 @@ int render_to_png_file(const RunConfig& c) {
   }
 }
 
-int render_to_png_buffer(const RunConfig& c,
-                         unsigned char** out,
-                         size_t* outsize) {
+int render_to_png_buffer(const RunConfig& c, Result* result) {
   unsigned char* buf = new unsigned char[c.width * c.height * 4];
   render_to_buffer(c, buf);
-  unsigned error = lodepng_encode32(out, outsize, buf, c.width, c.height);
+  unsigned error = lodepng_encode32(&result->data, &result->size, buf, c.width, c.height);
   if(error) {
     printf("Error %u: %s\n", error, lodepng_error_text(error));
     return 1;
