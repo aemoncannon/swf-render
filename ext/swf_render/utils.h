@@ -40,8 +40,8 @@ struct Result {
   Result() : data(NULL), size(0), origin_x(0), origin_y(0) {}
   unsigned char* data;
   size_t size;
-  int origin_x;
-  int origin_y;
+  double origin_x;
+  double origin_y;
 };
 
 #endif

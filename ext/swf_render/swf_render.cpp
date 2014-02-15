@@ -55,12 +55,12 @@ static VALUE Result_get_size(VALUE r) {
 static VALUE Result_get_origin_x(VALUE r) {
   struct Result *result;
   Data_Get_Struct(r, struct Result, result);
-  return INT2NUM(result->origin_x);
+  return rb_float_new(result->origin_x);
 }
 static VALUE Result_get_origin_y(VALUE r) {
   struct Result *result;
   Data_Get_Struct(r, struct Result, result);
-  return INT2NUM(result->origin_y);
+  return rb_float_new(result->origin_y);
 }
 static VALUE Result_get_data(VALUE r) {
   struct Result *result;

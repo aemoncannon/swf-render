@@ -52,7 +52,11 @@
 #include "tiny_swfparser.h"
 #include "utils.h"
 
-int render_to_buffer(const RunConfig& c, unsigned char* buf) {
+int render_to_buffer(
+    const RunConfig& c,
+    unsigned char* buf,
+    double* sprite_origin_x, 
+    double* sprite_origin_y) {
   TinySWFParser parser;
   ParsedSWF* swf = parser.parse(c.input_swf.c_str());
   //swf->Dump();
@@ -85,6 +89,8 @@ int render_to_buffer(const RunConfig& c, unsigned char* buf) {
     vp.device_viewport(0, 0, c.width, c.height);
     const Matrix view_transform = vp.to_affine();
 
+    // Find the sprite's origin in destination image coordinates.
+    view_transform.transform(sprite_origin_x, sprite_origin_y);
     tree->Render(view_transform, NULL, c.width, c.height, ren_base, ren);
 
   } else {
@@ -110,7 +116,9 @@ int render_to_buffer(const RunConfig& c, unsigned char* buf) {
 
 int render_to_png_file(const RunConfig& c) {
   unsigned char* buf = new unsigned char[c.width * c.height * 4];
-  render_to_buffer(c, buf);
+  double origin_x = 0.0;
+  double origin_y = 0.0;
+  render_to_buffer(c, buf, &origin_x, &origin_y);
   unsigned error = lodepng_encode32_file(c.output_png.c_str(), buf, c.width, c.height);
   if(error) {
     printf("Error %u: %s\n", error, lodepng_error_text(error));
@@ -122,7 +130,7 @@ int render_to_png_file(const RunConfig& c) {
 
 int render_to_png_buffer(const RunConfig& c, Result* result) {
   unsigned char* buf = new unsigned char[c.width * c.height * 4];
-  render_to_buffer(c, buf);
+  render_to_buffer(c, buf, &result->origin_x, &result->origin_y);
   unsigned error = lodepng_encode32(&result->data, &result->size, buf, c.width, c.height);
   if(error) {
     printf("Error %u: %s\n", error, lodepng_error_text(error));
