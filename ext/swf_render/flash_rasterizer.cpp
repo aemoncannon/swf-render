@@ -90,6 +90,8 @@ int render_to_buffer(
     const Matrix view_transform = vp.to_affine();
 
     // Find the sprite's origin in destination image coordinates.
+    *sprite_origin_x = 0.0;
+    *sprite_origin_y = 0.0;
     view_transform.transform(sprite_origin_x, sprite_origin_y);
     tree->Render(view_transform, NULL, c.width, c.height, ren_base, ren);
 
