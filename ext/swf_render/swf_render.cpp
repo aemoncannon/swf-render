@@ -91,9 +91,10 @@ static VALUE Result_get_data(VALUE r) {
 void Init_swf_render() {
 
   SWFRender = rb_define_module("SWFRender");
+  rb_define_singleton_method(SWFRender, "get_metadata", (VALUE(*)(...))method_get_metadata, 5);
   rb_define_singleton_method(SWFRender, "render", (VALUE(*)(...))method_render, 5);
   rb_define_singleton_method(SWFRender, "render_spec", (VALUE(*)(...))method_render_spec, 6);
-  rb_define_singleton_method(SWFRender, "get_metadata", (VALUE(*)(...))method_get_metadata, 6);
+
 
   ResultClass = rb_define_class_under(SWFRender, "Result", rb_cObject);
   rb_define_method(ResultClass, "get_size", (VALUE(*)(...))Result_get_size, 0);
