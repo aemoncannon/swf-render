@@ -62,14 +62,10 @@ int render_to_buffer(
   //swf->Dump();
   assert(swf);
 
-  agg::rendering_buffer rbuf;
-  rbuf.attach(buf, c.width, c.height, c.width * 4);
-  pixfmt pixf(rbuf);
-  renderer_base ren_base(pixf);
-  ren_base.clear(Color(0, 0, 0, 0));
-  renderer_scanline ren(ren_base);
-  const double pad = c.padding;
+  assert(c.class_name.size() || buf);
+
   if (const Sprite* sprite = swf->SpriteByClassName(c.class_name.c_str())) {
+    const double pad = c.padding;
     DisplayTree* tree = DisplayTree::Build(*swf, *sprite);
     if (c.spec.size()) {
       tree->ApplySpec(c.spec.c_str());
@@ -93,9 +89,28 @@ int render_to_buffer(
     *sprite_origin_x = 0.0;
     *sprite_origin_y = 0.0;
     view_transform.transform(sprite_origin_x, sprite_origin_y);
-    tree->Render(view_transform, NULL, c.width, c.height, ren_base, ren);
+
+    // Do the actual rendering of the sprite.
+    if (buf != NULL) {
+      agg::rendering_buffer rbuf;
+      rbuf.attach(buf, c.width, c.height, c.width * 4);
+      pixfmt pixf(rbuf);
+      renderer_base ren_base(pixf);
+      ren_base.clear(Color(0, 0, 0, 0));
+      renderer_scanline ren(ren_base);
+      tree->Render(view_transform, NULL, c.width, c.height, ren_base, ren);
+    }
 
   } else {
+
+    agg::rendering_buffer rbuf;
+    rbuf.attach(buf, c.width, c.height, c.width * 4);
+    pixfmt pixf(rbuf);
+    renderer_base ren_base(pixf);
+    ren_base.clear(Color(0, 0, 0, 0));
+    renderer_scanline ren(ren_base);
+    const double pad = c.padding;
+
     assert(swf->shapes.size());
     double x1 = 0;
     double x2 = 0;
@@ -140,6 +155,11 @@ int render_to_png_buffer(const RunConfig& c, Result* result) {
   } else {
     return 0;
   }
+}
+
+int get_metadata(const RunConfig& c, Result* result) {
+  render_to_buffer(c, NULL, &result->origin_x, &result->origin_y);
+  return 1;
 }
 
 int main(int argc, char* argv[]) {

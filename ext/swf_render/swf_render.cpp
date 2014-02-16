@@ -24,6 +24,14 @@
 // are all of type VALUE. Qnil is the C representation of Ruby's nil.
 extern "C" VALUE SWFRender = Qnil;
 extern "C" void Init_swf_render();
+extern "C" VALUE method_get_metadata(
+  VALUE self,
+  VALUE swf_name,
+  VALUE class_name,
+  VALUE width,
+  VALUE height,
+  VALUE padding);
+
 extern "C" VALUE method_render(
   VALUE self,
   VALUE swf_name,
@@ -85,6 +93,7 @@ void Init_swf_render() {
   SWFRender = rb_define_module("SWFRender");
   rb_define_singleton_method(SWFRender, "render", (VALUE(*)(...))method_render, 5);
   rb_define_singleton_method(SWFRender, "render_spec", (VALUE(*)(...))method_render_spec, 6);
+  rb_define_singleton_method(SWFRender, "get_metadata", (VALUE(*)(...))method_get_metadata, 6);
 
   ResultClass = rb_define_class_under(SWFRender, "Result", rb_cObject);
   rb_define_method(ResultClass, "get_size", (VALUE(*)(...))Result_get_size, 0);
@@ -143,4 +152,24 @@ VALUE method_render_spec(
   render_to_png_buffer(config, result);
   return Data_Wrap_Struct(ResultClass, NULL, Result_free, result);
 }
+
+VALUE method_get_metadata(
+    VALUE self,
+    VALUE swf_name,
+    VALUE class_name,
+    VALUE width,
+    VALUE height,
+    VALUE padding) {
+  struct Result* result;
+  result = ALLOC(struct Result);
+  RunConfig config;
+  config.input_swf = RSTRING_PTR(swf_name);
+  config.class_name = RSTRING_PTR(class_name);
+  config.width = NUM2INT(width);
+  config.height = NUM2INT(height);
+  config.padding = NUM2INT(padding);
+  get_metadata(config, result);
+  return Data_Wrap_Struct(ResultClass, NULL, Result_free, result);
+}
+
 

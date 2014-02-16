@@ -28,5 +28,6 @@ struct Result;
 
 int render_to_png_file(const RunConfig& c);
 int render_to_png_buffer(const RunConfig& c, Result* result);
+int get_metadata(const RunConfig& c, Result* result);
 
 #endif
