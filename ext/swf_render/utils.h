@@ -37,8 +37,15 @@ struct RunConfig {
 };
 
 struct Result {
-  Result() : data(NULL), size(0), origin_x(0),
-    origin_y(0), natural_width(0), natural_height(0) {}
+  Result() { Init(); }
+  void Init() {
+    data = NULL;
+    size = 0;
+    origin_x = 0;
+    origin_y = 0;
+    natural_width = 0;
+    natural_height = 0;
+  }
   unsigned char* data;
   size_t size;
   double origin_x;

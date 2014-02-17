@@ -135,6 +135,7 @@ VALUE method_render(
     VALUE padding) {
   struct Result* result;
   result = ALLOC(struct Result);
+  result->Init();
   RunConfig config;
   config.input_swf = RSTRING_PTR(swf_name);
   config.class_name = RSTRING_PTR(class_name);
@@ -155,6 +156,7 @@ VALUE method_render_spec(
     VALUE padding) {
   struct Result* result;
   result = ALLOC(struct Result);
+  result->Init();
   RunConfig config;
   config.input_swf = RSTRING_PTR(swf_name);
   config.class_name = RSTRING_PTR(class_name);
@@ -175,6 +177,7 @@ VALUE method_get_metadata(
     VALUE padding) {
   struct Result* result;
   result = ALLOC(struct Result);
+  result->Init();
   RunConfig config;
   config.input_swf = RSTRING_PTR(swf_name);
   config.class_name = RSTRING_PTR(class_name);
