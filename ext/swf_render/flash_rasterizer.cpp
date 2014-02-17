@@ -106,16 +106,24 @@ int render_to_buffer(
   return 0;
 }
 
+void get_output_dimensions(const DisplayTree& tree, int* width_in, int* height_in) {
+  if (*width_in == 0 || *height_in == 0) {
+    int width = 0;
+    int height = 0;
+    tree.GetNaturalSizeInPixels(&width, &height);
+    if (*width_in > 0) {
+      const double r = (double)height / (double)width;
+      *height_in = (int)((double)*width_in * r);
+    }
+  }
+}
+
 int render_to_png_file(const RunConfig& c) {
   DisplayTree* tree = create_display_tree(c);
-
   int width = c.width;
   int height = c.height;
   int pad = c.padding;
-  if (width == 0 && height == 0) {
-    tree->GetNaturalSizeInPixels(&width, &height);
-    pad = 0;
-  }
+  get_output_dimensions(*tree, &width, &height);
   unsigned char* buf = new unsigned char[width * height * 4];
   Matrix view_transform = create_view_matrix(*tree, width, height, pad);
   render_to_buffer(*tree, view_transform, width, height, buf);
@@ -133,10 +141,7 @@ int render_to_png_buffer(const RunConfig& c, Result* result) {
   int width = c.width;
   int height = c.height;
   int pad = c.padding;
-  if (width == 0 && height == 0) {
-    tree->GetNaturalSizeInPixels(&width, &height);
-    pad = 0;
-  }
+  get_output_dimensions(*tree, &width, &height);
   unsigned char* buf = new unsigned char[width * height * 4];
   Matrix view_transform = create_view_matrix(*tree, width, height, pad);
   render_to_buffer(*tree, view_transform, width, height, buf);
@@ -155,10 +160,7 @@ int get_metadata(const RunConfig& c, Result* result) {
   int width = c.width;
   int height = c.height;
   int pad = c.padding;
-  if (width == 0 && height == 0) {
-    tree->GetNaturalSizeInPixels(&width, &height);
-    pad = 0;
-  }
+  get_output_dimensions(*tree, &width, &height);
 
   Matrix view_transform = create_view_matrix(*tree, width, height, pad);
   result->origin_x = 0;
