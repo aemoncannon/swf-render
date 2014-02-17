@@ -147,6 +147,7 @@ int render_to_png_buffer(const RunConfig& c, Result* result) {
   get_output_dimensions(*tree, &width, &height);
   unsigned char* buf = new unsigned char[width * height * 4];
   Matrix view_transform = create_view_matrix(*tree, width, height, pad);
+  view_transform.transform(&result->origin_x, &result->origin_y);
   render_to_buffer(*tree, view_transform, width, height, buf);
   unsigned error = lodepng_encode32(&result->data, &result->size, buf, width, height);
   if(error) {
@@ -166,8 +167,6 @@ int get_metadata(const RunConfig& c, Result* result) {
   get_output_dimensions(*tree, &width, &height);
 
   Matrix view_transform = create_view_matrix(*tree, width, height, pad);
-  result->origin_x = 0;
-  result->origin_y = 0;
   view_transform.transform(&result->origin_x, &result->origin_y);
 
   return 0;
