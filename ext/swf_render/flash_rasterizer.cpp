@@ -166,6 +166,8 @@ int get_metadata(const RunConfig& c, Result* result) {
   int pad = c.padding;
   get_output_dimensions(*tree, &width, &height);
 
+  tree->GetNaturalSizeInPixels(&result->natural_width, &result->natural_height);
+
   Matrix view_transform = create_view_matrix(*tree, width, height, pad);
   view_transform.transform(&result->origin_x, &result->origin_y);
 

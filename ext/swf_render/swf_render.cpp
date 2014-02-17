@@ -70,6 +70,16 @@ static VALUE Result_get_origin_y(VALUE r) {
   Data_Get_Struct(r, struct Result, result);
   return rb_float_new(result->origin_y);
 }
+static VALUE Result_get_natural_width(VALUE r) {
+  struct Result *result;
+  Data_Get_Struct(r, struct Result, result);
+  return INT2NUM(result->natural_width);
+}
+static VALUE Result_get_natural_height(VALUE r) {
+  struct Result *result;
+  Data_Get_Struct(r, struct Result, result);
+  return INT2NUM(result->natural_height);
+}
 static VALUE Result_get_data(VALUE r) {
   struct Result *result;
   Data_Get_Struct(r, struct Result, result);
@@ -100,6 +110,8 @@ void Init_swf_render() {
   rb_define_method(ResultClass, "get_size", (VALUE(*)(...))Result_get_size, 0);
   rb_define_method(ResultClass, "get_origin_x", (VALUE(*)(...))Result_get_origin_x, 0);
   rb_define_method(ResultClass, "get_origin_y", (VALUE(*)(...))Result_get_origin_y, 0);
+  rb_define_method(ResultClass, "get_natural_width", (VALUE(*)(...))Result_get_natural_width, 0);
+  rb_define_method(ResultClass, "get_natural_height", (VALUE(*)(...))Result_get_natural_height, 0);
   rb_define_method(ResultClass, "get_data", (VALUE(*)(...))Result_get_data, 0);
 }
 
