@@ -158,6 +158,19 @@ void DisplayTree::GetBounds(
   }
 }
 
+void DisplayTree::GetNaturalSizeInPixels(
+    int* width_out,
+    int* height_out) const {
+  double x1 = 0;
+  double x2 = 0;
+  double y1 = 0;
+  double y2 = 0;
+  Matrix identity;
+  GetBounds(identity, &x1, &x2, &y1, &y2);
+  *width_out = (int)((x2 - x1) / 20.0);
+  *height_out = (int)((y2 - y1) / 20.0);
+}
+
 const ColorMatrix* DisplayTree::GetColorMatrix() const {
   if (placement) {
     for (std::vector<Filter>::const_iterator it =
@@ -175,7 +188,6 @@ const ColorMatrix* DisplayTree::GetColorMatrix() const {
   }
   return NULL;
 }
-
 
 int DisplayTree::Render(
     const Matrix& transform,

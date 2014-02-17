@@ -42,6 +42,8 @@ struct Result {
   size_t size;
   double origin_x;
   double origin_y;
+  double natural_width;
+  double natural_height;
 };
 
 #endif

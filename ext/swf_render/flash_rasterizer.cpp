@@ -52,91 +52,74 @@
 #include "tiny_swfparser.h"
 #include "utils.h"
 
-int render_to_buffer(
-    const RunConfig& c,
-    unsigned char* buf,
-    double* sprite_origin_x, 
-    double* sprite_origin_y) {
+DisplayTree* create_display_tree(const RunConfig& c) {
   TinySWFParser parser;
   ParsedSWF* swf = parser.parse(c.input_swf.c_str());
-  //swf->Dump();
   assert(swf);
-
-  assert(c.class_name.size() || buf);
-
   if (const Sprite* sprite = swf->SpriteByClassName(c.class_name.c_str())) {
-    const double pad = c.padding;
     DisplayTree* tree = DisplayTree::Build(*swf, *sprite);
     if (c.spec.size()) {
       tree->ApplySpec(c.spec.c_str());
     }
-    double x1 = 0;
-    double x2 = 0;
-    double y1 = 0;
-    double y2 = 0;
-    Matrix identity;
-    tree->GetBounds(identity, &x1, &x2, &y1, &y2);
-    agg::trans_viewport vp;
-    vp.preserve_aspect_ratio(0.5, 0.5, agg::aspect_ratio_meet);
-    vp.world_viewport(x1, y1, x2, y2);
-    vp.device_viewport(0, 0, c.width, c.height);
-    const double p = pad / vp.scale_x();  // Find world padding that will give the desired pixel padding.
-    vp.world_viewport(x1-p, y1-p, x2+p, y2+p);
-    vp.device_viewport(0, 0, c.width, c.height);
-    const Matrix view_transform = vp.to_affine();
-
-    // Find the sprite's origin in destination image coordinates.
-    *sprite_origin_x = 0.0;
-    *sprite_origin_y = 0.0;
-    view_transform.transform(sprite_origin_x, sprite_origin_y);
-
-    // Do the actual rendering of the sprite.
-    if (buf != NULL) {
-      agg::rendering_buffer rbuf;
-      rbuf.attach(buf, c.width, c.height, c.width * 4);
-      pixfmt pixf(rbuf);
-      renderer_base ren_base(pixf);
-      ren_base.clear(Color(0, 0, 0, 0));
-      renderer_scanline ren(ren_base);
-      tree->Render(view_transform, NULL, c.width, c.height, ren_base, ren);
-    }
-
-  } else {
-
-    agg::rendering_buffer rbuf;
-    rbuf.attach(buf, c.width, c.height, c.width * 4);
-    pixfmt pixf(rbuf);
-    renderer_base ren_base(pixf);
-    ren_base.clear(Color(0, 0, 0, 0));
-    renderer_scanline ren(ren_base);
-    const double pad = c.padding;
-
-    assert(swf->shapes.size());
-    double x1 = 0;
-    double x2 = 0;
-    double y1 = 0;
-    double y2 = 0;
-    Matrix identity;
-    DisplayTree::GetShapeBounds(swf->shapes[0], identity, &x1, &x2, &y1, &y2);
-    agg::trans_viewport vp;
-    vp.preserve_aspect_ratio(0.5, 0.5, agg::aspect_ratio_meet);
-    vp.world_viewport(x1 - pad, y1 - pad, x2 + pad, y2 + pad);
-    vp.device_viewport(0, 0, c.width, c.height);
-    const Matrix view_transform = vp.to_affine();
-    for (std::vector<Shape>::const_iterator it = swf->shapes.begin();
-         it != swf->shapes.end(); ++it) {
-      DisplayTree::RenderShape(*it, view_transform, NULL, c.width, c.height, ren_base, ren);
-    }
+    return tree;
   }
+  return NULL;
+}
+
+Matrix create_view_matrix(
+    const DisplayTree& tree,
+    int width,
+    int height,
+    int pad) {
+
+  double x1 = 0;
+  double x2 = 0;
+  double y1 = 0;
+  double y2 = 0;
+  Matrix identity;
+  tree.GetBounds(identity, &x1, &x2, &y1, &y2);
+
+  agg::trans_viewport vp;
+  vp.preserve_aspect_ratio(0.5, 0.5, agg::aspect_ratio_meet);
+  vp.world_viewport(x1, y1, x2, y2);
+  vp.device_viewport(0, 0, width, height);
+  const double p = pad / vp.scale_x();  // Find world padding that will give the desired pixel padding.
+  vp.world_viewport(x1-p, y1-p, x2+p, y2+p);
+  vp.device_viewport(0, 0, width, height);
+  return vp.to_affine();
+}
+
+int render_to_buffer(
+    const DisplayTree& tree,
+    const Matrix& view_transform,
+    int width,
+    int height,
+    unsigned char* buf) {
+
+  agg::rendering_buffer rbuf;
+  rbuf.attach(buf, width, height, width * 4);
+  pixfmt pixf(rbuf);
+  renderer_base ren_base(pixf);
+  ren_base.clear(Color(0, 0, 0, 0));
+  renderer_scanline ren(ren_base);
+  tree.Render(view_transform, NULL, width, height, ren_base, ren);
   return 0;
 }
 
 int render_to_png_file(const RunConfig& c) {
-  unsigned char* buf = new unsigned char[c.width * c.height * 4];
-  double origin_x = 0.0;
-  double origin_y = 0.0;
-  render_to_buffer(c, buf, &origin_x, &origin_y);
-  unsigned error = lodepng_encode32_file(c.output_png.c_str(), buf, c.width, c.height);
+  DisplayTree* tree = create_display_tree(c);
+
+  int width = c.width;
+  int height = c.height;
+  int pad = c.padding;
+  if (width == 0 && height == 0) {
+    tree->GetNaturalSizeInPixels(&width, &height);
+    pad = 0;
+  }
+  unsigned char* buf = new unsigned char[width * height * 4];
+  Matrix view_transform = create_view_matrix(*tree, width, height, pad);
+  render_to_buffer(*tree, view_transform, width, height, buf);
+  unsigned error = lodepng_encode32_file(c.output_png.c_str(), buf, width, height);
   if(error) {
     printf("Error %u: %s\n", error, lodepng_error_text(error));
     return 1;
@@ -146,9 +129,18 @@ int render_to_png_file(const RunConfig& c) {
 }
 
 int render_to_png_buffer(const RunConfig& c, Result* result) {
-  unsigned char* buf = new unsigned char[c.width * c.height * 4];
-  render_to_buffer(c, buf, &result->origin_x, &result->origin_y);
-  unsigned error = lodepng_encode32(&result->data, &result->size, buf, c.width, c.height);
+  DisplayTree* tree = create_display_tree(c);
+  int width = c.width;
+  int height = c.height;
+  int pad = c.padding;
+  if (width == 0 && height == 0) {
+    tree->GetNaturalSizeInPixels(&width, &height);
+    pad = 0;
+  }
+  unsigned char* buf = new unsigned char[width * height * 4];
+  Matrix view_transform = create_view_matrix(*tree, width, height, pad);
+  render_to_buffer(*tree, view_transform, width, height, buf);
+  unsigned error = lodepng_encode32(&result->data, &result->size, buf, width, height);
   if(error) {
     printf("Error %u: %s\n", error, lodepng_error_text(error));
     return 1;
@@ -158,8 +150,22 @@ int render_to_png_buffer(const RunConfig& c, Result* result) {
 }
 
 int get_metadata(const RunConfig& c, Result* result) {
-  render_to_buffer(c, NULL, &result->origin_x, &result->origin_y);
-  return 1;
+  DisplayTree* tree = create_display_tree(c);
+
+  int width = c.width;
+  int height = c.height;
+  int pad = c.padding;
+  if (width == 0 && height == 0) {
+    tree->GetNaturalSizeInPixels(&width, &height);
+    pad = 0;
+  }
+
+  Matrix view_transform = create_view_matrix(*tree, width, height, pad);
+  result->origin_x = 0;
+  result->origin_y = 0;
+  view_transform.transform(&result->origin_x, &result->origin_y);
+
+  return 0;
 }
 
 int main(int argc, char* argv[]) {

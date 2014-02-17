@@ -215,6 +215,10 @@ public:
       double* y_min_out,
       double* y_max_out) const;
 
+  void GetNaturalSizeInPixels(
+      int* width,
+      int* height) const;
+
   int Render(const Matrix& transform,
              const ColorMatrix* color_matrix,
              int clip_width,
