@@ -106,14 +106,17 @@ int render_to_buffer(
   return 0;
 }
 
-void get_output_dimensions(const DisplayTree& tree, int* width_in, int* height_in) {
-  if (*width_in == 0 || *height_in == 0) {
+void get_output_dimensions(const DisplayTree& tree, int* width_out, int* height_out) {
+  if (*width_out == 0 || *height_out == 0) {
     int width = 0;
     int height = 0;
     tree.GetNaturalSizeInPixels(&width, &height);
-    if (*width_in > 0) {
+    if (*width_out > 0) {
       const double r = (double)height / (double)width;
-      *height_in = (int)((double)*width_in * r);
+      *height_out = (int)((double)*width_out * r);
+    } else {
+      *width_out = width;
+      *height_out = height;
     }
   }
 }
